@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1123" height="1019" viewBox="0 0 1123 1019">
+  <title>HM Enterprises logo</title>
+  <g stroke="#000" stroke-width="5" stroke-linejoin="miter">
+    <path fill="#f58200" d="M422 133 719 445 985 22v196L783 558H663L422 332Z"/>
+    <path fill="#55b34d" d="M245 23C122 23 23 121 23 245v531c0 123 99 222 222 222s220-99 220-222V245C465 121 368 23 245 23Zm0 111c61 0 109 49 109 111v531c0 61-48 110-109 110s-109-49-109-110V245c0-62 48-111 109-111Z" fill-rule="evenodd"/>
+    <path fill="#f58200" d="M136 441h218v117H136Z"/>
+    <path fill="#55b34d" d="M986 22h116v976H986Z"/>
+  </g>
+</svg>

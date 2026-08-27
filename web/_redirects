@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA fallback – required for Flutter web + go_router
+# Without this, direct navigation / refresh on /products, /contact, /content/:slug, /login etc returns 404
+# https://developers.cloudflare.com/pages/configuration/redirects/
+/*    /index.html   200

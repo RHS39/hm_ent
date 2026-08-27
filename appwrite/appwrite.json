@@ -1,0 +1,109 @@
+{
+  "projectId": "YOUR_APPWRITE_PROJECT_ID",
+  "projectName": "hari-om-traders",
+  "endpoint": "https://cloud.appwrite.io/v1",
+  "databases": [
+    {
+      "$id": "hari_om_db",
+      "name": "Hari Om DB",
+      "collections": [
+        {
+          "$id": "products",
+          "name": "Products",
+          "documentSecurity": true,
+          "permissions": ["read(\"any\")", "create(\"users\")", "update(\"users\")", "delete(\"users\")"],
+          "attributes": [
+            {"key": "product_id", "type": "string", "size": 32, "required": true},
+            {"key": "name", "type": "string", "size": 128, "required": true},
+            {"key": "price", "type": "double", "required": true, "min": 0},
+            {"key": "description", "type": "string", "size": 1000, "required": false, "default": ""},
+            {"key": "icon", "type": "string", "size": 32, "required": false, "default": "spa"},
+            {"key": "category", "type": "string", "size": 32, "required": false, "default": "Jaggery"},
+            {"key": "stock_quantity", "type": "integer", "required": false, "min": 0, "default": 100},
+            {"key": "moq", "type": "integer", "required": false, "min": 1, "max": 999, "default": 2},
+            {"key": "image_url", "type": "string", "size": 500, "required": false},
+            {"key": "image_2", "type": "string", "size": 500, "required": false},
+            {"key": "image_3", "type": "string", "size": 500, "required": false},
+            {"key": "is_active", "type": "boolean", "required": false, "default": true}
+          ],
+          "indexes": [
+            {"key": "idx_product_id", "type": "unique", "attributes": ["product_id"]},
+            {"key": "idx_name", "type": "unique", "attributes": ["name"]},
+            {"key": "idx_category", "type": "key", "attributes": ["category"]}
+          ]
+        },
+        {
+          "$id": "subscribers",
+          "name": "Subscribers",
+          "documentSecurity": true,
+          "permissions": ["create(\"any\")", "read(\"users\")", "update(\"users\")", "delete(\"users\")"],
+          "attributes": [
+            {"key": "email", "type": "string", "size": 255, "required": true},
+            {"key": "status", "type": "string", "size": 32, "required": true, "default": "active"},
+            {"key": "subscribed_at", "type": "datetime", "required": true},
+            {"key": "updated_at", "type": "datetime", "required": true},
+            {"key": "source", "type": "string", "size": 64, "required": false, "default": "home_newsletter"},
+            {"key": "meta", "type": "string", "size": 2000, "required": false, "default": "{}"}
+          ],
+          "indexes": [
+            {"key": "idx_email", "type": "unique", "attributes": ["email"]},
+            {"key": "idx_status", "type": "key", "attributes": ["status"]}
+          ]
+        },
+        {
+          "$id": "contact_messages",
+          "name": "Contact Messages",
+          "documentSecurity": true,
+          "permissions": ["create(\"any\")", "read(\"users\")", "update(\"users\")", "delete(\"users\")"],
+          "attributes": [
+            {"key": "name", "type": "string", "size": 128, "required": true},
+            {"key": "email", "type": "string", "size": 255, "required": true},
+            {"key": "phone", "type": "string", "size": 32, "required": true},
+            {"key": "address", "type": "string", "size": 500, "required": true},
+            {"key": "pincode", "type": "string", "size": 16, "required": true},
+            {"key": "district", "type": "string", "size": 64, "required": true},
+            {"key": "state", "type": "string", "size": 64, "required": true},
+            {"key": "country", "type": "string", "size": 64, "required": false, "default": "India"},
+            {"key": "message", "type": "string", "size": 2000, "required": true},
+            {"key": "source", "type": "string", "size": 64, "required": false, "default": "contact_us_page"},
+            {"key": "status", "type": "string", "size": 32, "required": false, "default": "new"}
+          ]
+        },
+        {
+          "$id": "users",
+          "name": "Users",
+          "documentSecurity": true,
+          "permissions": ["read(\"users\")", "create(\"users\")", "update(\"users\")", "delete(\"users\")"],
+          "attributes": [
+            {"key": "userId", "type": "string", "size": 64, "required": true},
+            {"key": "name", "type": "string", "size": 128, "required": true},
+            {"key": "email", "type": "string", "size": 255, "required": true},
+            {"key": "phone", "type": "string", "size": 32, "required": false},
+            {"key": "role", "type": "string", "size": 32, "required": false, "default": "user"},
+            {"key": "privileges", "type": "string", "size": 2000, "required": false, "default": "[]"},
+            {"key": "status", "type": "string", "size": 32, "required": false, "default": "active"},
+            {"key": "emailVerification", "type": "boolean", "required": false, "default": false},
+            {"key": "phoneVerification", "type": "boolean", "required": false, "default": false}
+          ],
+          "indexes": [
+            {"key": "idx_userId", "type": "unique", "attributes": ["userId"]},
+            {"key": "idx_users_email", "type": "unique", "attributes": ["email"]},
+            {"key": "idx_users_role", "type": "key", "attributes": ["role"]},
+            {"key": "idx_users_status", "type": "key", "attributes": ["status"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "buckets": [
+    {
+      "$id": "product-images",
+      "name": "Product Images",
+      "permissions": ["read(\"any\")", "create(\"users\")", "update(\"users\")", "delete(\"users\")"],
+      "fileSecurity": true,
+      "enabled": true,
+      "maximumFileSize": 5242880,
+      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp", "gif"]
+    }
+  ]
+}
