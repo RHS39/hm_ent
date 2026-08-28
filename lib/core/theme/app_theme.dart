@@ -23,7 +23,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: isDark ? const Color(0xFF14181B) : Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
