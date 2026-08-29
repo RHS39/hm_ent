@@ -248,9 +248,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Row(
                     children: [
                       if (isMobile)
-                        IconButton(
-                          icon: const Icon(Icons.menu_rounded),
-                          onPressed: () => _showMobileNav(context),
+                        _HeaderMenuButton(
+                          onTap: () => _showMobileNav(context),
                         ),
                       const SizedBox(width: 8),
                       Flexible(
@@ -379,6 +378,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () { Navigator.pop(ctx); context.go('/'); },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderMenuButton extends StatefulWidget {
+  const _HeaderMenuButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_HeaderMenuButton> createState() => _HeaderMenuButtonState();
+}
+
+class _HeaderMenuButtonState extends State<_HeaderMenuButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: Tooltip(
+        message: 'Menu',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeInOut,
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _hovered ? const Color(0xFFF3F4F6) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.menu_rounded,
+              size: 26,
+              color: _hovered ? const Color(0xFF0B0E0F) : Colors.black54,
+            ),
+          ),
         ),
       ),
     );
