@@ -174,7 +174,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _verifySignupOtpAndCreate() async {
-    final otp = _otpCtrl.text.trim();
+    final otp = _otpCtrl.text.replaceAll(RegExp(r'\D'), '').trim();
     final v = AuthValidators.validateOtp(otp);
     if (v != null) {
       setState(() => _error = v);
@@ -275,7 +275,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _verifyOtpAndReset() async {
-    final otp = _otpCtrl.text.trim();
+    final otp = _otpCtrl.text.replaceAll(RegExp(r'\D'), '').trim();
     final v = AuthValidators.validateOtp(otp);
     if (v != null) {
       setState(() => _error = v);

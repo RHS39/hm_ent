@@ -343,12 +343,13 @@ class AppwriteAuthService {
 
     final sent = await EmailService.instance.sendOtpEmail(email: e, otp: otp, otpId: otpId, purpose: OtpEmailPurpose.signup);
     if (!sent) {
-      _otpStore.remove(e);
-      _pendingSignups.remove(e);
       if (kDebugMode) {
-        debugPrint('[Auth] ⚠️ Signup email send failed — returning OTP for debug display');
+        debugPrint('[Auth] ⚠️ Signup email send failed — returning OTP for debug display (keeping in-memory OTP alive)');
+        // Keep _otpStore/_pendingSignups so Verify still works in debug/web.
         return (ok: true, message: 'Email send failed (debug: OTP available below)', debugOtp: otp, otpId: otpId);
       }
+      _otpStore.remove(e);
+      _pendingSignups.remove(e);
       return (ok: false, message: 'Failed to send OTP. Please try again.', debugOtp: null, otpId: null);
     }
     debugPrint('[Auth] Signup OTP sent to $e (ID: $otpId)');
@@ -377,7 +378,9 @@ class AppwriteAuthService {
   /// Appwrite account, its user document, a session, and log the user in.
   static Future<({bool ok, String message})> verifySignupOtp(String email, String otp) async {
     final e = email.trim().toLowerCase();
-    final otpErr = AuthValidators.validateOtp(otp);
+    // Sanitize: user may paste "4 1 7 8 3 3" or "417-833" — keep only digits.
+    final cleanOtp = otp.replaceAll(RegExp(r'\D'), '').trim();
+    final otpErr = AuthValidators.validateOtp(cleanOtp);
     if (otpErr != null) return (ok: false, message: otpErr);
 
     final entry = _otpStore[e];
@@ -387,7 +390,7 @@ class AppwriteAuthService {
       _pendingSignups.remove(e);
       return (ok: false, message: 'This OTP has expired. Please request a new one.');
     }
-    if (entry.otp != otp.trim()) return (ok: false, message: 'The OTP is incorrect. Please try again.');
+    if (entry.otp != cleanOtp) return (ok: false, message: 'The OTP is incorrect. Please try again.');
     final pending = _pendingSignups[e];
     if (pending == null) return (ok: false, message: 'No pending signup found. Please start over.');
 
@@ -403,6 +406,7 @@ class AppwriteAuthService {
     }
 
     try {
+      debugPrint('[Auth] verifySignupOtp: OTP correct for $e, creating account…');
       final user = await AppwriteService.account.create(userId: ID.unique(), email: e, password: pending.password, name: pending.name);
       await AppwriteService.databases.createDocument(
         databaseId: AppwriteConfig.databaseId,
@@ -431,9 +435,18 @@ class AppwriteAuthService {
       debugPrint('[Auth] signup (verified OTP) ok: $e');
       return (ok: true, message: 'Account created — welcome!');
     } on AppwriteException catch (e2) {
-      return (ok: false, message: _friendly(e2));
+      debugPrint('[Auth] verifySignupOtp create failed: ${e2.code} ${e2.message}');
+      final msg = _friendly(e2);
+      // If friendly falls back to generic, include code for debugging.
+      if (msg == 'Something went wrong. Please try again.' && e2.message != null && e2.message!.trim().isNotEmpty) {
+        return (ok: false, message: e2.message!.trim());
+      }
+      return (ok: false, message: msg);
     } catch (e2) {
-      return (ok: false, message: _friendly(e2));
+      debugPrint('[Auth] verifySignupOtp unexpected: $e2');
+      final msg = _friendly(e2);
+      if (msg == 'Something went wrong. Please try again.') return (ok: false, message: 'Signup failed: $e2');
+      return (ok: false, message: msg);
     }
   }
 
@@ -636,12 +649,13 @@ class AppwriteAuthService {
   /// Step 2: Verify OTP via `email_auth` validateOtp, fallback to in-memory store.
   static Future<({bool ok, String message})> verifyResetOtp(String email, String otp) async {
     final normalized = email.trim().toLowerCase();
-    final otpErr = AuthValidators.validateOtp(otp);
+    final cleanOtp = otp.replaceAll(RegExp(r'\D'), '').trim();
+    final otpErr = AuthValidators.validateOtp(cleanOtp);
     if (otpErr != null) return (ok: false, message: otpErr);
 
     // 1) Try email_auth validation if last send was via email_auth
     if (_emailAuthSent.contains(normalized)) {
-      final ok = EmailAuthService.instance.verifyOtp(email: normalized, otp: otp.trim());
+      final ok = EmailAuthService.instance.verifyOtp(email: normalized, otp: cleanOtp);
       if (ok) {
         _verifiedEmails.add(normalized);
         _emailAuthSent.remove(normalized);
@@ -663,7 +677,7 @@ class AppwriteAuthService {
       _otpStore.remove(normalized);
       return (ok: false, message: 'This OTP has expired. Please request a new one.');
     }
-    if (entry.otp != otp.trim()) return (ok: false, message: 'The OTP is incorrect. Please try again.');
+    if (entry.otp != cleanOtp) return (ok: false, message: 'The OTP is incorrect. Please try again.');
     _otpStore.remove(normalized);
     _verifiedEmails.add(normalized);
     Future.delayed(const Duration(minutes: 10), () => _verifiedEmails.remove(normalized));
