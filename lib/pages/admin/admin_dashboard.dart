@@ -253,31 +253,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           onPressed: () => _showMobileNav(context),
                         ),
                       const SizedBox(width: 8),
-                      Text(
-                        ['Dashboard Overview', 'Contact Messages', 'Products', 'Subscriber Directory', 'Users'][_section.clamp(0, 4)],
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)),
+                      Flexible(
+                        child: Text(
+                          ['Dashboard Overview', 'Contact Messages', 'Products', 'Subscriber Directory', 'Users'][_section.clamp(0, 4)],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)),
+                        ),
                       ),
                       const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                              radius: 12,
-                              backgroundColor: const Color(0xFF00C805),
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'A',
-                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: const Color(0xFF00C805),
+                                child: Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0B0E0F))),
-                          ],
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0B0E0F))),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -360,7 +368,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(leading: const Icon(Icons.dashboard_rounded), title: const Text('Overview'), selected: _section == 0, onTap: () { Navigator.pop(ctx); _selectSection(0); }),
-            ListTile(leading: const Icon(Icons.mail_rounded), title: const Text('Contact Messages'), selected: _section == 1, onTap: () { Navigator.pop(ctx); _selectSection(1); }),
+            ListTile(leading: const Icon(Icons.mail_rounded), title: const Text('Contact Messages', overflow: TextOverflow.ellipsis), selected: _section == 1, onTap: () { Navigator.pop(ctx); _selectSection(1); }),
             ListTile(leading: const Icon(Icons.inventory_2_rounded), title: const Text('Products'), selected: _section == 2, onTap: () { Navigator.pop(ctx); _selectSection(2); }),
             ListTile(leading: const Icon(Icons.how_to_reg_rounded), title: const Text('Subscribers'), selected: _section == 3, onTap: () { Navigator.pop(ctx); _selectSection(3); }),
             ListTile(leading: const Icon(Icons.group_rounded), title: const Text('Users'), selected: _section == 4, onTap: () { Navigator.pop(ctx); _selectSection(4); }),
