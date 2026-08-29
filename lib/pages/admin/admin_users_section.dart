@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'admin_widgets.dart';
 import '../../appwrite/user_repository.dart';
@@ -445,6 +446,15 @@ class _UsersSectionState extends State<UsersSection> {
                                           role: selectedRole,
                                           privileges: selectedPrivs,
                                           status: selectedStatus);
+                                  final me = AppwriteAuthService.currentUser;
+                                  final myId = me?.$id ?? '';
+                                  if (myId.isNotEmpty && myId == docId.trim()) {
+                                    // Editing the currently logged-in user:
+                                    // refresh cache + notify router so the
+                                    // dashboard redirect re-evaluates role.
+                                    unawaited(
+                                        AppwriteAuthService.refreshProfile());
+                                  }
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   setState(() {
                                     final idx = _localUsers.indexWhere((e) =>

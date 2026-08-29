@@ -52,7 +52,10 @@ class AppwriteAuthService {
       final user = await AppwriteService.account.get();
       appwriteUserNotifier.value = user;
       // Fire-and-forget profile load (does not block routing)
-      unawaited(getProfile().then((p) => _cachedProfile = p));
+      unawaited(getProfile().then((p) {
+        _cachedProfile = p;
+        _notifyRouter();
+      }));
       debugPrint('[Auth] restored session: ${user.email}');
     } catch (_) {
       appwriteUserNotifier.value = _demoUser;
@@ -70,6 +73,7 @@ class AppwriteAuthService {
       final user = await AppwriteService.account.get();
       appwriteUserNotifier.value = user;
       _cachedProfile = await getProfile();
+      _notifyRouter();
       return true;
     } catch (_) {
       appwriteUserNotifier.value = null;
@@ -92,6 +96,28 @@ class AppwriteAuthService {
   }
 
   static Future<bool> canRestoreSession() => restoreSession();
+
+  /// Re-fetch the cached profile from the DB (e.g. after an admin edits the
+  /// currently logged-in user's role/status) and notify the router so the
+  /// dashboard redirect re-evaluates.
+  static Future<void> refreshProfile() async {
+    final u = currentUser;
+    if (u == null || _demoUser != null) return;
+    if (!AppwriteService.isInitialized) return;
+    try {
+      _cachedProfile = await getProfile();
+      _notifyRouter();
+      debugPrint('[Auth] refreshed cached profile: role=${_cachedProfile?.role}');
+    } catch (e) {
+      debugPrint('[Auth] refreshProfile failed: $e');
+    }
+  }
+
+  /// Fires the router's refreshListenable so GoRouter redirects re-evaluate on
+  /// profile/role changes (not just session changes).
+  static void _notifyRouter() {
+    appwriteUserNotifier.value = appwriteUserNotifier.value;
+  }
 
   static String get displayName {
     if (_cachedProfile != null && _cachedProfile!.name.trim().isNotEmpty) return _cachedProfile!.name;
@@ -170,6 +196,7 @@ class AppwriteAuthService {
       if (res.documents.isNotEmpty) {
         // Refresh cache
         _cachedProfile = UserModel.fromDocument(res.documents.first);
+        _notifyRouter();
         return;
       }
       final doc = await AppwriteService.databases.createDocument(
@@ -189,6 +216,7 @@ class AppwriteAuthService {
         },
       );
       _cachedProfile = UserModel.fromDocument(doc);
+      _notifyRouter();
       debugPrint('[Auth] backfilled users doc for ${user.email}');
     } catch (e) {
       debugPrint('[Auth] _ensureUserDoc: $e');
@@ -397,9 +425,9 @@ class AppwriteAuthService {
       });
       await AppwriteService.account.createEmailPasswordSession(email: e, password: pending.password);
       final me = await AppwriteService.account.get();
-      appwriteUserNotifier.value = me;
       _demoUser = null;
       await _ensureUserDoc(me);
+      appwriteUserNotifier.value = me;
       debugPrint('[Auth] signup (verified OTP) ok: $e');
       return (ok: true, message: 'Account created — welcome!');
     } on AppwriteException catch (e2) {
@@ -422,9 +450,9 @@ class AppwriteAuthService {
     try {
       await AppwriteService.account.createEmailPasswordSession(email: e, password: p);
       final me = await AppwriteService.account.get();
-      appwriteUserNotifier.value = me;
       _demoUser = null;
       await _ensureUserDoc(me);
+      appwriteUserNotifier.value = me;
       debugPrint('[Auth] signIn ok: $e');
       return (ok: true, message: 'Welcome back!');
     } on AppwriteException catch (e) {
@@ -445,8 +473,8 @@ class AppwriteAuthService {
       await AppwriteService.account.createEmailPasswordSession(email: email, password: password);
       final me = await AppwriteService.account.get();
       _demoUser = null;
-      appwriteUserNotifier.value = me;
       await _ensureUserDoc(me);
+      appwriteUserNotifier.value = me;
       return (ok: true, message: 'Welcome back!');
     } on AppwriteException catch (e) {
       final code = e.code ?? 0;
@@ -456,8 +484,8 @@ class AppwriteAuthService {
           await AppwriteService.account.createEmailPasswordSession(email: email, password: password);
           final me = await AppwriteService.account.get();
           _demoUser = null;
-          appwriteUserNotifier.value = me;
           await _ensureUserDoc(me);
+          appwriteUserNotifier.value = me;
           return (ok: true, message: '$name created & signed in');
         } on AppwriteException catch (e2) {
           if (e2.code == 409 || (e2.message ?? '').toLowerCase().contains('already exists')) {
@@ -465,8 +493,8 @@ class AppwriteAuthService {
               await AppwriteService.account.createEmailPasswordSession(email: email, password: password);
               final me = await AppwriteService.account.get();
               _demoUser = null;
-              appwriteUserNotifier.value = me;
               await _ensureUserDoc(me);
+              appwriteUserNotifier.value = me;
               return (ok: true, message: 'Welcome back!');
             } catch (_) {}
           }
