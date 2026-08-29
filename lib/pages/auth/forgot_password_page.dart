@@ -54,7 +54,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'DEBUG OTP: ${res.debugOtp}  (email not configured)',
+                      'DEBUG OTP ID: ${res.otpId ?? "N/A"} | OTP: ${res.debugOtp}  (email not configured)',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
                   ),
@@ -67,7 +67,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
           );
         }
-        context.go('/otp-verification?email=${Uri.encodeComponent(email)}');
+        final otpIdParam = res.otpId != null ? '&otpId=${Uri.encodeComponent(res.otpId!)}' : '';
+        context.go('/otp-verification?email=${Uri.encodeComponent(email)}$otpIdParam');
       }
     } else {
       setState(() => _error = res.message);

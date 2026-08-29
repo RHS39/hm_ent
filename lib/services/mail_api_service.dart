@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -69,7 +70,7 @@ class MailApiService {
               'html': htmlBody,
               if (textBody != null) 'text': textBody,
             }),
-          );
+          ).timeout(const Duration(seconds: 15));
           break;
 
         case 'sendgrid':
@@ -94,7 +95,7 @@ class MailApiService {
                 {'type': 'text/html', 'value': htmlBody}
               ],
             }),
-          );
+          ).timeout(const Duration(seconds: 15));
           break;
 
         case 'brevo':
@@ -114,7 +115,7 @@ class MailApiService {
               'subject': subject,
               'htmlContent': htmlBody,
             }),
-          );
+          ).timeout(const Duration(seconds: 15));
           break;
 
         case 'appwrite_function':
@@ -134,7 +135,7 @@ class MailApiService {
               'html': htmlBody,
               'text': textBody,
             }),
-          );
+          ).timeout(const Duration(seconds: 15));
           break;
 
         case 'generic':
@@ -157,7 +158,7 @@ class MailApiService {
               'fromEmail': fromEmail,
               'fromName': fromName,
             }),
-          );
+          ).timeout(const Duration(seconds: 15));
           break;
       }
 

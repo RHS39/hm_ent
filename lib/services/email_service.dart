@@ -153,11 +153,12 @@ class EmailService {
   Future<bool> sendOtpEmail({
     required String email,
     required String otp,
+    String? otpId,
   }) async {
     final normalized = email.trim().toLowerCase();
     lastOtp = otp;
     lastRecipient = normalized;
-    final html = _renderOtpTemplate(normalized, otp);
+    final html = _renderOtpTemplate(normalized, otp, otpId: otpId);
 
     debugPrint('[EmailService] sendOtpEmail → $normalized | SMTP configured=${GmailSmtpService.instance.isConfigured} | MailApi configured=${MailApiService.instance.isConfigured} | Gmail OAuth signedIn=${GmailService.instance.isSignedIn}');
 
@@ -169,7 +170,7 @@ class EmailService {
           to: normalized,
           subject: 'Your Password Reset OTP - Hari Om Traders',
           htmlBody: html,
-          textBody: 'Your OTP for $normalized is $otp (expires in 10 minutes).',
+          textBody: 'Your OTP ID: ${otpId ?? "N/A"} | OTP: $otp (expires in 10 minutes).',
         );
         if (sent) {
           debugPrint('[EmailService] ✅ OTP email sent via Gmail SMTP to $normalized');
@@ -191,7 +192,7 @@ class EmailService {
           to: normalized,
           subject: 'Your Password Reset OTP - Hari Om Traders',
           htmlBody: html,
-          textBody: 'Your OTP for $normalized is $otp (expires in 10 minutes).',
+          textBody: 'Your OTP ID: ${otpId ?? "N/A"} | OTP: $otp (expires in 10 minutes).',
         );
         if (sent) {
           debugPrint('[EmailService] ✅ OTP email sent via Mail API to $normalized');
@@ -225,7 +226,7 @@ class EmailService {
     // 4) No provider sent the email — return false so caller knows email was NOT delivered.
     debugPrint('═══════════════════════════════════════════════');
     debugPrint('[EmailService] ❌ NO EMAIL PROVIDER SENT THE OTP');
-    debugPrint('[EmailService] OTP for $normalized: $otp');
+    debugPrint('[EmailService] OTP ID: ${otpId ?? "N/A"} | OTP for $normalized: $otp');
     debugPrint('[EmailService] (Web: mailer needs dart:io — configure MAIL_API_KEY for web)');
     debugPrint('[EmailService] (Desktop/mobile: check GMAIL_APP_PASSWORD / Gmail 2FA)');
     debugPrint('═══════════════════════════════════════════════');
@@ -233,7 +234,7 @@ class EmailService {
     return false;
   }
 
-  String _renderOtpTemplate(String email, String otp) {
+  String _renderOtpTemplate(String email, String otp, {String? otpId}) {
     return '''
 <!DOCTYPE html>
 <html>
@@ -252,6 +253,7 @@ class EmailService {
           <strong style="color:#0B0E0F;">$email</strong>.<br/>
           This code expires in <strong>10 minutes</strong>.
         </p>
+        ${otpId != null ? '<div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:14px 16px; margin:8px 0 16px 0; display:flex; justify-content:space-between; align-items:center;"><span style="color:#6B7280; font-size:13px; font-weight:600;">OTP ID</span><span style="font-size:22px; font-weight:900; letter-spacing:6px; color:#0B0E0F; font-family:monospace;">$otpId</span></div>' : ''}
         <div style="background:#F9FAFB; border:2px dashed #00C805; border-radius:12px; padding:20px; text-align:center; margin:8px 0;">
           <span style="font-size:36px; font-weight:900; letter-spacing:10px; color:#0B0E0F; font-family:monospace;">$otp</span>
         </div>

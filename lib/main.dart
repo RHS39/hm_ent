@@ -118,7 +118,7 @@ class _MyAppState extends State<MyApp> {
         GoRoute(path: '/login', name: 'login', builder: (context, state) => const AuthPage(initialMode: AuthMode.login)),
         GoRoute(path: '/signup', name: 'signup', builder: (context, state) => const AuthPage(initialMode: AuthMode.signup)),
         GoRoute(path: '/forgot-password', name: 'forgot-password', builder: (context, state) => const ForgotPasswordPage()),
-        GoRoute(path: '/otp-verification', name: 'otp-verification', builder: (context, state) => OtpVerificationPage(email: state.uri.queryParameters['email'])),
+        GoRoute(path: '/otp-verification', name: 'otp-verification', builder: (context, state) => OtpVerificationPage(email: state.uri.queryParameters['email'], otpId: state.uri.queryParameters['otpId'])),
         // Cart standalone (redirect alias)
         GoRoute(path: '/cart', redirect: (context, state) => '/app/cart'),
         GoRoute(path: '/checkout', builder: (context, state) => const CheckoutPage()),

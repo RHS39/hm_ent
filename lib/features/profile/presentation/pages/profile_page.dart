@@ -241,10 +241,11 @@ class _SettingsSheet extends StatelessWidget {
           final n = newCtrl.text.trim();
           final c = confirmCtrl.text.trim();
           final o = oldCtrl.text.trim();
+          if (o.isEmpty) { setSt(() => error = 'Current password is required'); return; }
           if (n.length < 8) { setSt(() => error = 'Password must be at least 8 characters'); return; }
           if (n != c) { setSt(() => error = 'Passwords do not match'); return; }
           setSt(() { busy = true; error = null; });
-          final res = await AppwriteAuthService.updatePassword(newPassword: n, oldPassword: o.isEmpty ? null : o);
+          final res = await AppwriteAuthService.updatePassword(oldPassword: o, newPassword: n, confirmPassword: c);
           if (!ctx.mounted) return;
           setSt(() => busy = false);
           if (res.ok) {

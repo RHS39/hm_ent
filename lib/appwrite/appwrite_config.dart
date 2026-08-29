@@ -74,6 +74,14 @@ class AppwriteConfig {
     defaultValue: 'product-images',
   );
 
+  // ── Appwrite Management API Key (for server-side operations like password reset) ──
+  /// API key with scopes: users.read, users.write.
+  /// Create in Appwrite Console > Project > Overview > API Keys > Create.
+  /// Inject via --dart-define=APPWRITE_API_KEY=your_key
+  /// NEVER commit this to source control.
+  static const String appwriteApiKey = String.fromEnvironment('APPWRITE_API_KEY', defaultValue: 'standard_c7da4f715463badc08c741ca78b1ebccee037d8698ac391549d9d9d02772a87c8e332deb577c8e7af417b6847a568d299891bde5d3ce140d2193c3779a548aaf7eb5f282064c14dc6a2c7579eb83d599ac5a7645ea942c58058b22bc43f4e84b2ab9c7cbd5c95c4103d7d316b2ffa98cc3d75b5118c282c26b972e81c5c84322');
+  static bool get isApiKeyConfigured => appwriteApiKey.trim().isNotEmpty;
+
   // ── Gmail API Configuration (legacy OAuth — client-side popup) ──
   /// Gmail OAuth 2.0 Client ID from Google Cloud Console.
   static const String gmailClientId = String.fromEnvironment(

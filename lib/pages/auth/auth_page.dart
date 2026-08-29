@@ -33,6 +33,7 @@ class _AuthPageState extends State<AuthPage> {
   // Forgot password OTP flow
   _ResetStep _resetStep = _ResetStep.none;
   String _resetEmail = '';
+  String? _resetOtpId;
   Timer? _resendTimer;
   int _resendSeconds = 0;
 
@@ -120,6 +121,7 @@ class _AuthPageState extends State<AuthPage> {
       _resetStep = _ResetStep.none;
       _error = null;
       _info = null;
+      _resetOtpId = null;
       _otpCtrl.clear();
     });
   }
@@ -150,6 +152,7 @@ class _AuthPageState extends State<AuthPage> {
       _info = res.ok ? res.message : null;
       _error = res.ok ? null : res.message;
       _resetStep = res.ok ? _ResetStep.otp : _resetStep;
+      _resetOtpId = res.ok ? res.otpId : _resetOtpId;
     });
     if (res.ok) {
       _startResendCooldown();
@@ -163,7 +166,7 @@ class _AuthPageState extends State<AuthPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'DEBUG OTP: ${res.debugOtp}  (email not configured — check console)',
+                    'DEBUG OTP ID: ${res.otpId ?? "N/A"} | OTP: ${res.debugOtp}  (email not configured — check console)',
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
                 ),
@@ -599,6 +602,24 @@ class _AuthPageState extends State<AuthPage> {
 
                         // ── Step: Enter OTP ──
                         if (_resetStep == _ResetStep.otp) ...[
+                          if (_resetOtpId != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1A1F24) : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: isDark ? const Color(0xFF23282D) : const Color(0xFFE5E7EB)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('OTP ID', style: TextStyle(color: const Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w600)),
+                                  Text(_resetOtpId!, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 6, color: isDark ? Colors.white : const Color(0xFF0B0E0F), fontFamily: 'monospace')),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _otpCtrl,

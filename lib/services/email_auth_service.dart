@@ -54,7 +54,8 @@ class EmailAuthService {
   Future<bool> sendOtp({required String email, int otpLength = 6}) async {
     final normalized = email.trim().toLowerCase();
     try {
-      final ok = await _auth.sendOtp(recipientMail: normalized, otpLength: otpLength);
+      final ok = await _auth.sendOtp(recipientMail: normalized, otpLength: otpLength)
+          .timeout(const Duration(seconds: 10));
       debugPrint('[EmailAuthService] sendOtp $normalized → $ok (remoteConfigured=$_remoteConfigured)');
       return ok;
     } catch (e) {

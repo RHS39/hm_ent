@@ -11,8 +11,9 @@ import '../../core/validators/auth_validators.dart';
 /// Step 1: verify 6-digit OTP (with countdown + resend)
 /// Step 2: set new password via [AppwriteAuthService.resetPasswordWithOtp]
 class OtpVerificationPage extends StatefulWidget {
-  const OtpVerificationPage({super.key, this.email});
+  const OtpVerificationPage({super.key, this.email, this.otpId});
   final String? email;
+  final String? otpId;
   @override
   State<OtpVerificationPage> createState() => _OtpVerificationPageState();
 }
@@ -158,6 +159,24 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                   Text('Enter OTP', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
                   const SizedBox(height: 4),
                   Text('Code sent to $_email (expires in 10 min)', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF6B7280))),
+                  if (widget.otpId != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1A1F24) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? const Color(0xFF23282D) : const Color(0xFFE5E7EB)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('OTP ID', style: TextStyle(color: const Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text(widget.otpId!, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 6, color: isDark ? Colors.white : const Color(0xFF0B0E0F), fontFamily: 'monospace')),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   if (_error != null) Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFECACA))), child: Row(children: [const Icon(Icons.error_outline, size: 16, color: Color(0xFFDC2626)), const SizedBox(width: 8), Expanded(child: Text(_error!, style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13)))])),
                   if (_info != null) Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFD1FAE5))), child: Row(children: [const Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF059669)), const SizedBox(width: 8), Expanded(child: Text(_info!, style: const TextStyle(color: Color(0xFF065F46), fontSize: 13)))])),

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'appwrite_client.dart';
 import 'appwrite_config.dart';
 import '../core/errors/auth_error.dart';
@@ -352,7 +354,7 @@ class AppwriteAuthService {
   // ── OTP-based Reset Password (email_auth package) ──
   // Primary: `email_auth` package (sendOtp/validateOtp) via EmailAuthService.
   // Fallback: in-memory OTP + MailApi/Gmail for dev / when email_auth server fails.
-  static final Map<String, ({String otp, DateTime expiresAt})> _otpStore = {};
+  static final Map<String, ({String otp, String otpId, DateTime expiresAt})> _otpStore = {};
   static final Set<String> _verifiedEmails = {};
   static final Map<String, DateTime> _lastOtpSentAt = {};
   // Tracks which emails last used email_auth vs fallback store
@@ -362,6 +364,7 @@ class AppwriteAuthService {
   static const Duration otpResendCooldown = Duration(seconds: 60);
 
   static String _generateOtp() => List.generate(6, (_) => Random.secure().nextInt(10)).join();
+  static String _generateOtpId() => List.generate(3, (_) => Random.secure().nextInt(10)).join();
 
   static bool canResendOtp(String email) {
     final n = email.trim().toLowerCase();
@@ -383,29 +386,29 @@ class AppwriteAuthService {
   /// when configured, otherwise tries email_auth package, fallback to custom Mail API.
   /// No existence gate — OTP always sent if email valid.
   /// [debugOtp] is set in debug mode when email cannot actually be sent (web/no provider).
-  static Future<({bool ok, String message, String? debugOtp})> sendResetOtp(String email) async {
+  static Future<({bool ok, String message, String? debugOtp, String? otpId})> sendResetOtp(String email) async {
     final normalized = email.trim().toLowerCase();
     final emailErr = AuthValidators.validateEmail(normalized);
-    if (emailErr != null) return (ok: false, message: emailErr, debugOtp: null);
-    if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured', debugOtp: null);
+    if (emailErr != null) return (ok: false, message: emailErr, debugOtp: null, otpId: null);
+    if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured', debugOtp: null, otpId: null);
     if (!canResendOtp(normalized)) {
       final r = resendCooldownRemaining(normalized);
-      return (ok: false, message: 'Please wait ${r}s before resending', debugOtp: null);
+      return (ok: false, message: 'Please wait ${r}s before resending', debugOtp: null, otpId: null);
     }
 
-    // 1) Primary when Gmail SMTP is configured — uses rohitft20@gmail.com / nrcppvuxywvttyvj
-    // This is the user-requested path for reset-password OTP.
-    if (!AppwriteConfig.isGmailSmtpConfigured) {
-      // Only try email_auth when Gmail SMTP is NOT configured
+    // 1) Try email_auth ONLY when a custom server is configured.
+    // Skip on web when Gmail SMTP isn't available — the default email_auth server is defunct.
+    // On desktop/mobile with Gmail SMTP configured, skip email_auth and go direct.
+    if (AppwriteConfig.isEmailAuthConfigured && !AppwriteConfig.isGmailSmtpConfigured) {
       try {
         final sentViaEmailAuth = await EmailAuthService.instance.sendOtp(email: normalized, otpLength: 6);
-        if (sentViaEmailAuth) {
+          if (sentViaEmailAuth) {
           _verifiedEmails.remove(normalized);
           _lastOtpSentAt[normalized] = DateTime.now();
           _emailAuthSent.add(normalized);
           _otpStore.remove(normalized);
           if (kDebugMode) debugPrint('[Auth] OTP via email_auth sent to $normalized');
-          return (ok: true, message: 'OTP sent to $normalized', debugOtp: null);
+          return (ok: true, message: 'OTP sent to $normalized', debugOtp: null, otpId: null);
         }
         debugPrint('[Auth] email_auth send failed, falling back to Gmail SMTP/custom OTP');
       } catch (e) {
@@ -417,22 +420,23 @@ class AppwriteAuthService {
 
     // 2) Gmail SMTP via App Password + Mail API fallback (works with rohitft20@gmail.com)
     final otp = _generateOtp();
-    _otpStore[normalized] = (otp: otp, expiresAt: DateTime.now().toUtc().add(otpExpiry));
+    final otpId = _generateOtpId();
+    _otpStore[normalized] = (otp: otp, otpId: otpId, expiresAt: DateTime.now().toUtc().add(otpExpiry));
     _verifiedEmails.remove(normalized);
     _lastOtpSentAt[normalized] = DateTime.now();
     _emailAuthSent.remove(normalized);
-    final sent = await EmailService.instance.sendOtpEmail(email: normalized, otp: otp);
+    final sent = await EmailService.instance.sendOtpEmail(email: normalized, otp: otp, otpId: otpId);
     if (!sent) {
       // Email failed to send. In debug mode, return the OTP so UI can display it.
       if (kDebugMode) {
         debugPrint('[Auth] ⚠️ Email send failed — returning OTP for debug display');
-        return (ok: true, message: 'Email send failed (debug: OTP available below)', debugOtp: otp);
+        return (ok: true, message: 'Email send failed (debug: OTP available below)', debugOtp: otp, otpId: otpId);
       }
       _otpStore.remove(normalized);
-      return (ok: false, message: 'Failed to send OTP. Please try again.', debugOtp: null);
+      return (ok: false, message: 'Failed to send OTP. Please try again.', debugOtp: null, otpId: null);
     }
-    if (kDebugMode) debugPrint('[Auth] OTP sent to $normalized');
-    return (ok: true, message: 'OTP sent to $normalized', debugOtp: null);
+    if (kDebugMode) debugPrint('[Auth] OTP sent to $normalized (ID: $otpId)');
+    return (ok: true, message: 'OTP sent to $normalized', debugOtp: null, otpId: otpId);
   }
 
   /// Step 2: Verify OTP via `email_auth` validateOtp, fallback to in-memory store.
@@ -491,6 +495,10 @@ class AppwriteAuthService {
   }
 
   /// Step 3b: Direct reset using OTP-verified email (primary path from AuthPage).
+  /// Uses Appwrite Management API (users.lookup + users.updatePassword) directly —
+  /// requires APPWRITE_API_KEY with users.read + users.write scopes.
+  /// Inject via --dart-define=APPWRITE_API_KEY=your_key
+  /// Falls back to relay server if API key not configured.
   static Future<({bool ok, String message})> resetPasswordWithOtp({
     required String email,
     required String newPassword,
@@ -502,15 +510,113 @@ class AppwriteAuthService {
     final passErr = AuthValidators.validatePassword(newPassword);
     if (passErr != null) return (ok: false, message: passErr);
     if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured');
+
+    // 1) Primary: Appwrite Management API via HTTP (no relay server needed).
+    // Requires APPWRITE_API_KEY with users.read + users.write scopes.
+    if (AppwriteConfig.isApiKeyConfigured) {
+      try {
+        final endpoint = AppwriteConfig.endpoint;
+        final apiKey = AppwriteConfig.appwriteApiKey;
+        final projectId = AppwriteConfig.projectId;
+
+// Step A: Find user by email.
+        // Note: Appwrite v1.x+ expects JSON-encoded queries (matching Query.toString()),
+        // e.g. {"method":"equal","attribute":"email","values":["..."]} — the legacy
+        // equal("email", "...") string format returns HTTP 400.
+        final listUri = Uri.parse(
+          '$endpoint/users?queries[]=${Uri.encodeComponent('{"method":"equal","attribute":"email","values":["$normalized"]}')}',
+        );
+        final listRes = await http.get(listUri, headers: {
+          'X-Appwrite-Project': projectId,
+          'X-Appwrite-Key': apiKey,
+        }).timeout(const Duration(seconds: 10));
+
+        if (listRes.statusCode != 200) {
+          debugPrint('[Auth] Management API list users failed ${listRes.statusCode}: ${listRes.body}');
+          return (ok: false, message: 'Failed to find account. Please try again.');
+        }
+
+        final listJson = jsonDecode(listRes.body) as Map<String, dynamic>;
+        final users = (listJson['users'] as List?) ?? [];
+        if (users.isEmpty) {
+          return (ok: false, message: 'No account found for $normalized');
+        }
+
+        final userId = (users.first as Map<String, dynamic>)['\$id'] as String;
+        debugPrint('[Auth] Found userId=$userId for $normalized');
+
+        // Step B: Update password
+        final patchUri = Uri.parse('$endpoint/users/$userId/password');
+        final patchRes = await http.patch(patchUri, headers: {
+          'X-Appwrite-Project': projectId,
+          'X-Appwrite-Key': apiKey,
+          'Content-Type': 'application/json',
+        }, body: jsonEncode({'password': newPassword})).timeout(const Duration(seconds: 10));
+
+        if (patchRes.statusCode >= 200 && patchRes.statusCode < 300) {
+          debugPrint('[Auth] ✅ Password reset via Management API for $normalized');
+          _verifiedEmails.remove(normalized);
+          return (ok: true, message: 'Password reset successful. Please log in.');
+        }
+
+        debugPrint('[Auth] Management API update failed ${patchRes.statusCode}: ${patchRes.body}');
+        return (ok: false, message: 'Failed to update password. Please try again.');
+      } catch (e) {
+        debugPrint('[Auth] Management API error: $e');
+        return (ok: false, message: 'Password reset failed: $e');
+      }
+    }
+
+    // 2) Fallback: local relay server (tools/smtp_server.dart POST /reset-password).
+    // Requires APPWRITE_API_KEY env var on the relay server.
     try {
-      final url = kIsWeb ? '${Uri.base.origin}/reset' : 'https://hariomtraders.com/reset';
-      final token = await AppwriteService.account.createRecovery(email: normalized, url: url);
-      await AppwriteService.account.updateRecovery(userId: token.userId, secret: token.secret, password: newPassword);
-      _verifiedEmails.remove(normalized);
-      return (ok: true, message: 'Password reset successful. Please log in.');
-    } on AppwriteException catch (e) {
-      return (ok: false, message: _friendly(e));
+      final relayUri = Uri.parse('http://localhost:8080/reset-password');
+      final r = await http
+          .post(relayUri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'email': normalized, 'newPassword': newPassword}))
+          .timeout(const Duration(seconds: 15));
+      final body = r.body.isNotEmpty ? jsonDecode(r.body) as Map<String, dynamic> : <String, dynamic>{};
+      if (r.statusCode >= 200 && r.statusCode < 300 && (body['success'] == true)) {
+        _verifiedEmails.remove(normalized);
+        return (ok: true, message: (body['message'] as String?) ?? 'Password reset successful. Please log in.');
+      }
+      debugPrint('[Auth] relay reset failed ${r.statusCode}: ${body['error']}');
+      return (ok: false, message: 'Password reset failed. Set APPWRITE_API_KEY via --dart-define or run relay server.');
     } catch (e) {
+      debugPrint('[Auth] relay not reachable ($e)');
+      return (ok: false, message: 'Password reset not configured. Pass --dart-define=APPWRITE_API_KEY="your_key" when building.');
+    }
+} 
+
+  /// Update password after OTP verification
+  /// [newPassword] must meet minimum 8-character requirement.
+  /// Does NOT require the old password (OTP flow).
+  /// Uses the single verified email from [_verifiedEmails].
+  static Future<({bool ok, String message})> updatePasswordAfterOtp({
+    required String newPassword,
+  }) async {
+    final normalized = AppwriteAuthService._verifiedEmails.first;
+    if (normalized.isEmpty) return (ok: false, message: 'No verified email found. Verify OTP first.');
+
+    // Only proceed if exactly one email is verified; otherwise ask user to specify
+    if (AppwriteAuthService._verifiedEmails.length != 1) {
+      return (ok: false, message: 'Multiple verified emails found. Please specify the account email.');
+    }
+
+    final passErr = AuthValidators.validatePassword(newPassword);
+    if (passErr != null) return (ok: false, message: passErr);
+    if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured');
+
+    try {
+      debugPrint('[Auth] updatePasswordAfterOtp: resetting password for $normalized');
+      final result = await resetPasswordWithOtp(email: normalized, newPassword: newPassword);
+      if (result.ok) {
+        return (ok: true, message: result.message);
+      }
+      return (ok: false, message: result.message);
+    } catch (e) {
+      debugPrint('[Auth] updatePasswordAfterOtp error: $e');
       return (ok: false, message: _friendly(e));
     }
   }
@@ -533,22 +639,43 @@ class AppwriteAuthService {
     }
   }
 
-  /// Update password for logged-in user.
+  /// Update password for a logged-in user.
+  ///
+  /// [oldPassword] is required — Appwrite enforces it for security.
+  /// [confirmPassword] is validated locally before the API call.
   static Future<({bool ok, String message})> updatePassword({
+    required String oldPassword,
     required String newPassword,
-    String? oldPassword,
+    String? confirmPassword,
   }) async {
     if (_demoUser != null) return (ok: false, message: 'Demo accounts cannot change password');
     if (!isLoggedIn) return (ok: false, message: 'Not logged in');
+    if (oldPassword.isEmpty) return (ok: false, message: 'Current password is required');
+
     final passErr = AuthValidators.validatePassword(newPassword);
     if (passErr != null) return (ok: false, message: passErr);
+
+    if (confirmPassword != null && newPassword != confirmPassword) {
+      return (ok: false, message: 'Passwords do not match');
+    }
+    if (newPassword == oldPassword) {
+      return (ok: false, message: 'New password must be different from current password');
+    }
     if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured');
     try {
-      await AppwriteService.account.updatePassword(password: newPassword, oldPassword: oldPassword);
+      debugPrint('[Auth] updatePassword: calling Appwrite SDK');
+      await AppwriteService.account.updatePassword(
+        password: newPassword,
+        oldPassword: oldPassword,
+      );
+      debugPrint('[Auth] updatePassword: success');
       return (ok: true, message: 'Password updated successfully');
     } on AppwriteException catch (e) {
+      debugPrint('[Auth] updatePassword AppwriteException: ${e.code} ${e.message}');
+      if (e.code == 401) return (ok: false, message: 'Current password is incorrect');
       return (ok: false, message: _friendly(e));
     } catch (e) {
+      debugPrint('[Auth] updatePassword error: $e');
       return (ok: false, message: _friendly(e));
     }
   }
@@ -587,3 +714,4 @@ class AppwriteAuthService {
     _emailAuthSent.clear();
   }
 }
+ 
