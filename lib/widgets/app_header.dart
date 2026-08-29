@@ -193,24 +193,22 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                             return Row(mainAxisSize: MainAxisSize.min, children: [
                                               if (!isNarrow) ...[
                                                 Flexible(
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                    decoration: BoxDecoration(color: isDark?const Color(0xFF1A1F24):const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(100), border: Border.all(color: isDark?const Color(0xFF23282D):const Color(0xFFE5E7EB))),
-                                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                                      CircleAvatar(radius: 12, backgroundColor: const Color(0xFF00C805), child: Text(name.isNotEmpty?name[0].toUpperCase():'U', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
-                                                      const SizedBox(width: 6),
-                                                      Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg))),
-                                                    ]),
+                                                  child: InkWell(
+                                                    onTap: () => context.go('/app'),
+                                                    borderRadius: BorderRadius.circular(100),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                      decoration: BoxDecoration(color: isDark?const Color(0xFF1A1F24):const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(100), border: Border.all(color: isDark?const Color(0xFF23282D):const Color(0xFFE5E7EB))),
+                                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                                        CircleAvatar(radius: 12, backgroundColor: const Color(0xFF00C805), child: Text(name.isNotEmpty?name[0].toUpperCase():'U', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
+                                                        const SizedBox(width: 6),
+                                                        Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg))),
+                                                      ]),
+                                                    ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
                                               ],
-                                              TextButton(
-                                                onPressed: () => context.go('/app'),
-                                                style: TextButton.styleFrom(foregroundColor: const Color(0xFF00C805), textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                                                child: const Text('My Account'),
-                                              ),
-                                              const SizedBox(width: 4),
                                               OutlinedButton(
                                                 onPressed: () async { await AppwriteAuthService.signOut(); if(context.mounted) context.go('/'); },
                                                 style: OutlinedButton.styleFrom(foregroundColor: fg, side: BorderSide(color: isDark?const Color(0xFF2A2E32):const Color(0xFFE5E7EB)), shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)),
