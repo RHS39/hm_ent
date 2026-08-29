@@ -313,7 +313,7 @@ class AppwriteAuthService {
     _lastOtpSentAt[e] = DateTime.now();
     _emailAuthSent.remove(e);
 
-    final sent = await EmailService.instance.sendOtpEmail(email: e, otp: otp, otpId: otpId);
+    final sent = await EmailService.instance.sendOtpEmail(email: e, otp: otp, otpId: otpId, purpose: OtpEmailPurpose.signup);
     if (!sent) {
       _otpStore.remove(e);
       _pendingSignups.remove(e);
@@ -591,7 +591,7 @@ class AppwriteAuthService {
     _verifiedEmails.remove(normalized);
     _lastOtpSentAt[normalized] = DateTime.now();
     _emailAuthSent.remove(normalized);
-    final sent = await EmailService.instance.sendOtpEmail(email: normalized, otp: otp, otpId: otpId);
+    final sent = await EmailService.instance.sendOtpEmail(email: normalized, otp: otp, otpId: otpId, purpose: OtpEmailPurpose.passwordReset);
     if (!sent) {
       // Email failed to send. In debug mode, return the OTP so UI can display it.
       if (kDebugMode) {

@@ -3,6 +3,9 @@ import 'gmail_service.dart';
 import 'gmail_smtp_service.dart';
 import 'mail_api_service.dart';
 
+/// Purpose of the OTP email — controls subject + heading + body copy.
+enum OtpEmailPurpose { signup, passwordReset }
+
 /// Email service that uses Gmail API to send verification emails.
 /// Falls back to debug logging when Gmail is not authenticated.
 ///
@@ -154,13 +157,21 @@ class EmailService {
     required String email,
     required String otp,
     String? otpId,
+    OtpEmailPurpose purpose = OtpEmailPurpose.passwordReset,
   }) async {
     final normalized = email.trim().toLowerCase();
     lastOtp = otp;
     lastRecipient = normalized;
-    final html = _renderOtpTemplate(normalized, otp, otpId: otpId);
+    final html = _renderOtpTemplate(normalized, otp, otpId: otpId, purpose: purpose);
 
-    debugPrint('[EmailService] sendOtpEmail → $normalized | SMTP configured=${GmailSmtpService.instance.isConfigured} | MailApi configured=${MailApiService.instance.isConfigured} | Gmail OAuth signedIn=${GmailService.instance.isSignedIn}');
+    debugPrint('[EmailService] sendOtpEmail → $normalized | purpose=$purpose | SMTP configured=${GmailSmtpService.instance.isConfigured} | MailApi configured=${MailApiService.instance.isConfigured} | Gmail OAuth signedIn=${GmailService.instance.isSignedIn}');
+
+    final subject = purpose == OtpEmailPurpose.signup
+        ? 'Verify your email — Hari Om Traders'
+        : 'Your Password Reset OTP - Hari Om Traders';
+    final textBody = purpose == OtpEmailPurpose.signup
+        ? 'Your OTP ID: ${otpId ?? "N/A"} | Registration code: $otp (expires in 10 minutes). Enter this code to verify your email and complete registration.'
+        : 'Your OTP ID: ${otpId ?? "N/A"} | OTP: $otp (expires in 10 minutes).';
 
     // 1) Preferred: Gmail SMTP via App Password (direct, no popup — mobile/desktop only)
     if (GmailSmtpService.instance.isConfigured) {
@@ -168,9 +179,9 @@ class EmailService {
         debugPrint('[EmailService] Attempting Gmail SMTP send...');
         final sent = await GmailSmtpService.instance.sendEmail(
           to: normalized,
-          subject: 'Your Password Reset OTP - Hari Om Traders',
+          subject: subject,
           htmlBody: html,
-          textBody: 'Your OTP ID: ${otpId ?? "N/A"} | OTP: $otp (expires in 10 minutes).',
+          textBody: textBody,
         );
         if (sent) {
           debugPrint('[EmailService] ✅ OTP email sent via Gmail SMTP to $normalized');
@@ -190,9 +201,9 @@ class EmailService {
         debugPrint('[EmailService] Attempting Mail API send...');
         final sent = await MailApiService.instance.sendEmail(
           to: normalized,
-          subject: 'Your Password Reset OTP - Hari Om Traders',
+          subject: subject,
           htmlBody: html,
-          textBody: 'Your OTP ID: ${otpId ?? "N/A"} | OTP: $otp (expires in 10 minutes).',
+          textBody: textBody,
         );
         if (sent) {
           debugPrint('[EmailService] ✅ OTP email sent via Mail API to $normalized');
@@ -210,7 +221,7 @@ class EmailService {
         debugPrint('[EmailService] Attempting Gmail OAuth send...');
         final sent = await GmailService.instance.sendEmail(
           to: normalized,
-          subject: 'Your Password Reset OTP - Hari Om Traders',
+          subject: subject,
           htmlBody: html,
         );
         if (sent) {
@@ -234,16 +245,29 @@ class EmailService {
     return false;
   }
 
-  String _renderOtpTemplate(String email, String otp, {String? otpId}) {
+  String _renderOtpTemplate(String email, String otp, {String? otpId, OtpEmailPurpose purpose = OtpEmailPurpose.passwordReset}) {
     // Premium, email-client-safe OTP template (table-based, no flex for Gmail/Outlook).
-    // Fixes: OTP ID row was flex-based and rendered cramped/overlapped on mobile.
+    // Purpose-aware copy: signup vs password reset.
+    final isSignup = purpose == OtpEmailPurpose.signup;
+    final title = isSignup ? 'Verify your email - Hari Om Traders' : 'Password Reset OTP - Hari Om Traders';
+    final heading = isSignup ? 'Verify your email' : 'Password reset code';
+    final introLine = isSignup
+        ? 'Hi — use the code below to verify your email and complete your registration for'
+        : 'Hi — use the code below to reset the password for';
+    final ctaHint = isSignup
+        ? 'Enter this code on the registration screen to verify your email and create your account.'
+        : 'Enter this code on the password reset screen to create a new password.';
+    final ignoreTitle = isSignup ? 'Didn&apos;t create an account?' : 'Didn&apos;t request this?';
+    final ignoreBody = isSignup
+        ? 'You can safely ignore this email — no account will be created.'
+        : 'You can safely ignore this email — your password will not be changed. If you&apos;re concerned, please contact support.';
     return '''
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset OTP - Hari Om Traders</title>
+    <title>$title</title>
   </head>
   <body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <!-- Preheader (hidden preview text) -->
@@ -268,9 +292,9 @@ class EmailService {
             <!-- Body -->
             <tr>
               <td style="padding:28px 28px 24px 28px;">
-                <h1 style="margin:0 0 10px 0; font-size:22px; font-weight:900; color:#0B0E0F; line-height:1.25; letter-spacing:-0.3px;">Password reset code</h1>
+                <h1 style="margin:0 0 10px 0; font-size:22px; font-weight:900; color:#0B0E0F; line-height:1.25; letter-spacing:-0.3px;">$heading</h1>
                 <p style="margin:0 0 18px 0; color:#4B5563; font-size:14px; line-height:1.65;">
-                  Hi — use the code below to reset the password for<br>
+                  $introLine<br>
                   <span style="color:#0B0E0F; font-weight:700; word-break:break-all;">$email</span>
                 </p>
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 14px 0;">
@@ -297,12 +321,12 @@ class EmailService {
                   </tr>
                 </table>
                 <p style="margin:18px 0 0 0; color:#6B7280; font-size:12px; line-height:1.6; text-align:center;">
-                  Enter this code on the password reset screen to create a new password.
+                  $ctaHint
                 </p>
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:18px 0 0 0;">
                   <tr>
                     <td style="border-top:1px solid #F3F4F6; padding-top:16px; color:#9CA3AF; font-size:11px; line-height:1.6;">
-                      <strong style="color:#6B7280;">Didn&apos;t request this?</strong> You can safely ignore this email — your password will not be changed. If you&apos;re concerned, please contact support.
+                      <strong style="color:#6B7280;">$ignoreTitle</strong> $ignoreBody
                     </td>
                   </tr>
                 </table>
