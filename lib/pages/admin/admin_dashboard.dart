@@ -263,6 +263,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const Spacer(),
                       Flexible(
+                        fit: FlexFit.tight,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
@@ -270,7 +271,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             borderRadius: BorderRadius.circular(100),
                           ),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               CircleAvatar(
                                 radius: 12,
@@ -281,7 +281,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Flexible(
+                              Expanded(
                                 child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0B0E0F))),
                               ),
                             ],
@@ -367,11 +367,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.dashboard_rounded), title: const Text('Overview'), selected: _section == 0, onTap: () { Navigator.pop(ctx); _selectSection(0); }),
+            ListTile(leading: const Icon(Icons.dashboard_rounded), title: const Text('Overview', overflow: TextOverflow.ellipsis), selected: _section == 0, onTap: () { Navigator.pop(ctx); _selectSection(0); }),
             ListTile(leading: const Icon(Icons.mail_rounded), title: const Text('Contact Messages', overflow: TextOverflow.ellipsis), selected: _section == 1, onTap: () { Navigator.pop(ctx); _selectSection(1); }),
-            ListTile(leading: const Icon(Icons.inventory_2_rounded), title: const Text('Products'), selected: _section == 2, onTap: () { Navigator.pop(ctx); _selectSection(2); }),
-            ListTile(leading: const Icon(Icons.how_to_reg_rounded), title: const Text('Subscribers'), selected: _section == 3, onTap: () { Navigator.pop(ctx); _selectSection(3); }),
-            ListTile(leading: const Icon(Icons.group_rounded), title: const Text('Users'), selected: _section == 4, onTap: () { Navigator.pop(ctx); _selectSection(4); }),
+            ListTile(leading: const Icon(Icons.inventory_2_rounded), title: const Text('Products', overflow: TextOverflow.ellipsis), selected: _section == 2, onTap: () { Navigator.pop(ctx); _selectSection(2); }),
+            ListTile(leading: const Icon(Icons.how_to_reg_rounded), title: const Text('Subscribers', overflow: TextOverflow.ellipsis), selected: _section == 3, onTap: () { Navigator.pop(ctx); _selectSection(3); }),
+            ListTile(leading: const Icon(Icons.group_rounded), title: const Text('Users', overflow: TextOverflow.ellipsis), selected: _section == 4, onTap: () { Navigator.pop(ctx); _selectSection(4); }),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.home_rounded),

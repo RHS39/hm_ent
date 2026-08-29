@@ -366,7 +366,7 @@ class _ContactsSectionState extends State<ContactsSection> {
               child: const Icon(Icons.mail_rounded, size: 18, color: Color(0xFF2563EB)),
             ),
             const SizedBox(width: 10),
-            const Text('Contacts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+            const Flexible(child: Text('Contacts', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
             const Spacer(),
             OutlinedButton.icon(
               onPressed: () => _exportContacts(filtered),
@@ -411,7 +411,7 @@ class _ContactsSectionState extends State<ContactsSection> {
             child: const Icon(Icons.inbox_rounded, size: 18, color: Color(0xFF2563EB)),
           ),
           const SizedBox(width: 10),
-          const Text('Inbox', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+          const Flexible(child: Text('Inbox', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

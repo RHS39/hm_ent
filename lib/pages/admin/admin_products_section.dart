@@ -395,7 +395,9 @@ class _ProductsSectionState extends State<ProductsSection> {
           children: [
             const Icon(Icons.inventory_2_rounded, size: 20, color: Color(0xFF00C805)),
             const SizedBox(width: 8),
-            Text('Products (${_products.length})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+            Flexible(
+              child: Text('Products (${_products.length})', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+            ),
             const Spacer(),
             FilledButton.icon(
               onPressed: () => _showProductForm(),
