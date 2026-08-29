@@ -239,25 +239,26 @@ class AppwriteAuthService {
     if (passErr != null) return (ok: false, message: passErr);
     try {
       final user = await AppwriteService.account.create(userId: ID.unique(), email: e, password: p, name: n);
-      await AppwriteService.databases.createDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.usersCollectionId,
-        documentId: user.$id,
-        data: {
-          'userId': user.$id,
-          'name': n,
-          'email': e.toLowerCase(),
-          'phone': '',
-          'role': 'customer',
-          'privileges': '["view_products","place_orders","view_orders","manage_cart","manage_wishlist","view_invoices","manage_profile","contact_support"]',
-          'status': 'active',
-          'emailVerification': false,
-          'phoneVerification': false,
-        },
-      ).catchError((err) {
-        debugPrint('[Auth] DB doc create failed (non-fatal): $err');
-        return null as dynamic;
-      });
+      try {
+        await AppwriteService.databases.createDocument(
+          databaseId: AppwriteConfig.databaseId,
+          collectionId: AppwriteConfig.usersCollectionId,
+          documentId: user.$id,
+          data: {
+            'userId': user.$id,
+            'name': n,
+            'email': e.toLowerCase(),
+            'phone': '',
+            'role': 'customer',
+            'privileges': '["view_products","place_orders","view_orders","manage_cart","manage_wishlist","view_invoices","manage_profile","contact_support"]',
+            'status': 'active',
+            'emailVerification': false,
+            'phoneVerification': false,
+          },
+        );
+      } catch (dbErr) {
+        debugPrint('[Auth] DB doc create failed (non-fatal): $dbErr');
+      }
       await AppwriteService.account.createEmailPasswordSession(email: e, password: p);
       final me = await AppwriteService.account.get();
       appwriteUserNotifier.value = me;
@@ -408,25 +409,26 @@ class AppwriteAuthService {
     try {
       debugPrint('[Auth] verifySignupOtp: OTP correct for $e, creating account…');
       final user = await AppwriteService.account.create(userId: ID.unique(), email: e, password: pending.password, name: pending.name);
-      await AppwriteService.databases.createDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.usersCollectionId,
-        documentId: user.$id,
-        data: {
-          'userId': user.$id,
-          'name': pending.name,
-          'email': e,
-          'phone': '',
-          'role': 'customer',
-          'privileges': '["view_products","place_orders","view_orders","manage_cart","manage_wishlist","view_invoices","manage_profile","contact_support"]',
-          'status': 'active',
-          'emailVerification': true,
-          'phoneVerification': false,
-        },
-      ).catchError((err) {
-        debugPrint('[Auth] DB doc create failed (non-fatal): $err');
-        return null as dynamic;
-      });
+      try {
+        await AppwriteService.databases.createDocument(
+          databaseId: AppwriteConfig.databaseId,
+          collectionId: AppwriteConfig.usersCollectionId,
+          documentId: user.$id,
+          data: {
+            'userId': user.$id,
+            'name': pending.name,
+            'email': e,
+            'phone': '',
+            'role': 'customer',
+            'privileges': '["view_products","place_orders","view_orders","manage_cart","manage_wishlist","view_invoices","manage_profile","contact_support"]',
+            'status': 'active',
+            'emailVerification': true,
+            'phoneVerification': false,
+          },
+        );
+      } catch (dbErr) {
+        debugPrint('[Auth] DB doc create failed (non-fatal): $dbErr');
+      }
       await AppwriteService.account.createEmailPasswordSession(email: e, password: pending.password);
       final me = await AppwriteService.account.get();
       _demoUser = null;
