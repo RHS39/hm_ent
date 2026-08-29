@@ -620,43 +620,51 @@ class _MessageSourceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: CustomPaint(
-                  painter: _DonutPainter(
-                    values: entries.map((e) => e.value.toDouble()).toList(),
-                    colors: entries.map((e) => colors[e.key] ?? const Color(0xFF2563EB)).toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Column(
+          LayoutBuilder(builder: (context, c2) {
+            final isCompact = c2.maxWidth < 520;
+            if (isCompact) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: entries.map((e) {
-                  final c = colors[e.key] ?? const Color(0xFF2563EB);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-                        const SizedBox(width: 8),
-                        Text(e.key, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
-                        const SizedBox(width: 6),
-                        Text('(${((e.value / total) * 100).round()}%)', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  children: recentContacts.take(2).map((c) {
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        height: 100,
+                        child: CustomPaint(
+                          painter: _DonutPainter(
+                            values: entries.map((e) => e.value.toDouble()).toList(),
+                            colors: entries.map((e) => colors[e.key] ?? const Color(0xFF2563EB)).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: entries.map((e) {
+                            final c = colors[e.key] ?? const Color(0xFF2563EB);
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+                                  const SizedBox(width: 6),
+                                  Flexible(child: Text(e.key, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF374151)))),
+                                  const SizedBox(width: 4),
+                                  Text('(${((e.value / total) * 100).round()}%)', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...recentContacts.take(2).map((c) {
                     final name = (c['name'] ?? 'Rohit').toString();
                     final email = (c['email'] ?? 'rohit110@gmail.com').toString();
                     final status = (c['status'] ?? 'new').toString();
@@ -666,11 +674,7 @@ class _MessageSourceCard extends StatelessWidget {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFF3F4F6)),
-                      ),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF3F4F6))),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -680,16 +684,7 @@ class _MessageSourceCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(child: Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0B0E0F)))),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: isNew ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(6)),
-                                      child: Text(isNew ? 'new' : 'read', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isNew ? Colors.white : const Color(0xFF6B7280))),
-                                    ),
-                                  ],
-                                ),
+                                Row(children: [Expanded(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0B0E0F)))), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: isNew ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(6)), child: Text(isNew ? 'new' : 'read', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isNew ? Colors.white : const Color(0xFF6B7280))))]),
                                 Text(email, style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280)), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 2),
                                 Text(isNew ? 'New' : shortSnippet, style: const TextStyle(fontSize: 11, color: Color(0xFF374151)), maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -701,11 +696,88 @@ class _MessageSourceCard extends StatelessWidget {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 110,
+                  height: 110,
+                  child: CustomPaint(
+                    painter: _DonutPainter(
+                      values: entries.map((e) => e.value.toDouble()).toList(),
+                      colors: entries.map((e) => colors[e.key] ?? const Color(0xFF2563EB)).toList(),
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 14),
+                Flexible(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: entries.map((e) {
+                      final c = colors[e.key] ?? const Color(0xFF2563EB);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+                            const SizedBox(width: 6),
+                            Flexible(child: Text(e.key, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF374151)))),
+                            const SizedBox(width: 4),
+                            Text('(${((e.value / total) * 100).round()}%)', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: recentContacts.take(2).map((c) {
+                      final name = (c['name'] ?? 'Rohit').toString();
+                      final email = (c['email'] ?? 'rohit110@gmail.com').toString();
+                      final status = (c['status'] ?? 'new').toString();
+                      final isNew = status.toLowerCase() == 'new';
+                      final snippet = (c['message'] ?? 'Message snippet rihza ...').toString();
+                      final shortSnippet = snippet.length > 24 ? '${snippet.substring(0, 24)}...' : snippet;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF3F4F6))),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(radius: 13, backgroundColor: const Color(0xFF6B7280), child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'R', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [Expanded(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0B0E0F)))), Container(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2), decoration: BoxDecoration(color: isNew ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(6)), child: Text(isNew ? 'new' : 'read', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: isNew ? Colors.white : const Color(0xFF6B7280))))]),
+                                  Text(email, style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 2),
+                                  Text(isNew ? 'New' : shortSnippet, style: const TextStyle(fontSize: 10, color: Color(0xFF374151)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Text('— 2d ago', style: TextStyle(fontSize: 9, color: Color(0xFF9CA3AF))),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );

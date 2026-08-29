@@ -264,9 +264,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       Flexible(
                         fit: FlexFit.loose,
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: isMobile ? 140 : 180),
+                          constraints: BoxConstraints(maxWidth: isMobile ? 110 : 180),
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: isMobile ? 4 : 6),
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 12, vertical: isMobile ? 3 : 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFFECFDF5),
                               borderRadius: BorderRadius.circular(100),
@@ -291,13 +291,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                         ),
                       ),
-                      SizedBox(width: isMobile ? 4 : 8),
+                      SizedBox(width: isMobile ? 3 : 8),
                       SizedBox(
-                        width: isMobile ? 36 : 44,
-                        height: isMobile ? 36 : 44,
+                        width: isMobile ? 32 : 44,
+                        height: isMobile ? 32 : 44,
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          icon: Icon(Icons.logout_rounded, size: isMobile ? 18 : 20),
+                          icon: Icon(Icons.logout_rounded, size: isMobile ? 16 : 20),
                           tooltip: 'Log out',
                           onPressed: () async {
                             await AppwriteAuthService.signOut();
@@ -408,7 +408,7 @@ class _MobileNavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: Material(
         color: selected ? const Color(0xFFECFDF5) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -416,16 +416,16 @@ class _MobileNavTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
           child: SizedBox(
-            height: 44,
+            height: 40,
             child: Row(
               children: [
-                const SizedBox(width: 12),
-                Icon(icon, size: 20, color: selected ? const Color(0xFF00C805) : const Color(0xFF6B7280)),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Icon(icon, size: 18, color: selected ? const Color(0xFF00C805) : const Color(0xFF6B7280)),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? const Color(0xFF0B0E0F) : const Color(0xFF374151))),
+                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? const Color(0xFF0B0E0F) : const Color(0xFF374151))),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
               ],
             ),
           ),
@@ -461,23 +461,22 @@ class _HeaderMenuButtonState extends State<_HeaderMenuButton> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           child: AnimatedScale(
-            scale: _pressed ? 0.92 : _hovered ? 1.0 : 1.0,
+            scale: _pressed ? 0.90 : _hovered ? 0.98 : 1.0,
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOut,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOut,
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: _pressed ? const Color(0xFFE5E7EB) : _hovered ? const Color(0xFFF3F4F6) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _hovered ? const Color(0xFFE5E7EB) : Colors.transparent, width: 1),
+                borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(
                 Icons.menu_rounded,
-                size: 20,
+                size: 18,
                 color: _hovered ? const Color(0xFF0B0E0F) : const Color(0xFF6B7280),
               ),
             ),
