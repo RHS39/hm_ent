@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'appwrite/appwrite_client.dart';
 import 'appwrite/auth_service.dart';
+import 'services/gmail_service.dart';
 import 'widgets/app_header.dart';
 import 'pages/home_page.dart';
 import 'pages/products_page.dart';
@@ -14,6 +16,9 @@ import 'pages/feature_detail_page.dart';
 import 'pages/dynamic_content_page.dart';
 import 'pages/verify_email_page.dart';
 import 'pages/auth/auth_page.dart';
+import 'pages/auth/forgot_password_page.dart';
+import 'pages/auth/otp_verification_page.dart';
+import 'pages/auth/reset_password_page.dart';
 import 'pages/admin/admin_dashboard.dart';
 
 // New post-login features
@@ -36,6 +41,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppwriteService.init();
   try {
+    await GmailService.instance.init();
+  } catch (_) {}
+  try {
     await AppwriteAuthService.initListener();
   } catch (_) {}
   runApp(const MyApp());
@@ -54,16 +62,18 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _router = GoRouter(
-      initialLocation: '/',
+      initialLocation: kIsWeb ? null : '/',
       refreshListenable: appwriteUserNotifier,
       redirect: (context, state) {
         final loc = state.matchedLocation;
         final isAdminRoute = loc.startsWith('/admin');
         final isAuthRoute = loc == '/login' || loc == '/signup';
         final isProtected = loc.startsWith('/app') || loc == '/cart' || loc == '/checkout' || loc.startsWith('/order-success');
+        final isPublicAction = loc == '/reset' || loc == '/verify-email' || loc == '/forgot-password' || loc == '/otp-verification';
         final loggedIn = AppwriteAuthService.isLoggedIn;
         final isAdmin = AppwriteAuthService.isAdmin;
 
+        if (isPublicAction) return null;
         if (isAdminRoute && !loggedIn) return '/login';
         if (isAdminRoute && loggedIn && !isAdmin) return '/';
         if (isProtected && !loggedIn) return '/login';
@@ -96,8 +106,19 @@ class _MyAppState extends State<MyApp> {
           return DynamicContentPage(slug: slug, title: q['title'], body: q['body']);
         }),
         GoRoute(path: '/verify-email', name: 'verify-email', builder: (context, state) => VerifyEmailPage(token: state.uri.queryParameters['token'])),
+        GoRoute(
+          path: '/reset',
+          name: 'reset-password',
+          builder: (context, state) => ResetPasswordPage(
+            userId: state.uri.queryParameters['userId'],
+            secret: state.uri.queryParameters['secret'],
+            expire: state.uri.queryParameters['expire'],
+          ),
+        ),
         GoRoute(path: '/login', name: 'login', builder: (context, state) => const AuthPage(initialMode: AuthMode.login)),
         GoRoute(path: '/signup', name: 'signup', builder: (context, state) => const AuthPage(initialMode: AuthMode.signup)),
+        GoRoute(path: '/forgot-password', name: 'forgot-password', builder: (context, state) => const ForgotPasswordPage()),
+        GoRoute(path: '/otp-verification', name: 'otp-verification', builder: (context, state) => OtpVerificationPage(email: state.uri.queryParameters['email'])),
         // Cart standalone (redirect alias)
         GoRoute(path: '/cart', redirect: (context, state) => '/app/cart'),
         GoRoute(path: '/checkout', builder: (context, state) => const CheckoutPage()),

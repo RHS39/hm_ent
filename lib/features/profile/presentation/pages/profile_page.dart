@@ -219,10 +219,63 @@ class _SettingsSheet extends StatelessWidget {
             const Divider(),
             SwitchListTile(value: Theme.of(context).brightness == Brightness.dark, onChanged: (v) => themeController.value = v ? ThemeMode.dark : ThemeMode.light, title: const Text('Dark mode'), secondary: const Icon(Icons.dark_mode_rounded), activeColor: const Color(0xFF00C805)),
             SwitchListTile(value: state.notifications, onChanged: (v) => context.read<ProfileCubit>().toggleNotifications(v), title: const Text('Notifications'), secondary: const Icon(Icons.notifications_rounded), activeColor: const Color(0xFF00C805)),
-            ListTile(leading: const Icon(Icons.lock_rounded), title: const Text('Change password'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () {}),
+            ListTile(leading: const Icon(Icons.lock_rounded), title: const Text('Change password'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => _showChangePassword(context)),
           ]),
         );
       },
+    );
+  }
+
+  void _showChangePassword(BuildContext context) {
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool obscureOld = true, obscureNew = true;
+    bool busy = false;
+    String? error;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(builder: (ctx2, setSt) {
+        Future<void> submit() async {
+          final n = newCtrl.text.trim();
+          final c = confirmCtrl.text.trim();
+          final o = oldCtrl.text.trim();
+          if (n.length < 8) { setSt(() => error = 'Password must be at least 8 characters'); return; }
+          if (n != c) { setSt(() => error = 'Passwords do not match'); return; }
+          setSt(() { busy = true; error = null; });
+          final res = await AppwriteAuthService.updatePassword(newPassword: n, oldPassword: o.isEmpty ? null : o);
+          if (!ctx.mounted) return;
+          setSt(() => busy = false);
+          if (res.ok) {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message)));
+          } else {
+            setSt(() => error = res.message);
+          }
+        }
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            decoration: BoxDecoration(color: Theme.of(ctx).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(100))),
+              const SizedBox(height: 12),
+              const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              const SizedBox(height: 12),
+              if (error != null) Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFECACA))), child: Text(error!, style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13))),
+              TextField(controller: oldCtrl, obscureText: obscureOld, decoration: InputDecoration(labelText: 'Current password (if set)', suffixIcon: IconButton(icon: Icon(obscureOld ? Icons.visibility_off : Icons.visibility, size: 18), onPressed: () => setSt(() => obscureOld = !obscureOld)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+              const SizedBox(height: 12),
+              TextField(controller: newCtrl, obscureText: obscureNew, decoration: InputDecoration(labelText: 'New password', suffixIcon: IconButton(icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, size: 18), onPressed: () => setSt(() => obscureNew = !obscureNew)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+              const SizedBox(height: 12),
+              TextField(controller: confirmCtrl, obscureText: obscureNew, decoration: InputDecoration(labelText: 'Confirm new password', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: busy ? null : submit, style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00C805), padding: const EdgeInsets.symmetric(vertical: 14), shape: const StadiumBorder()), child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Update Password', style: TextStyle(fontWeight: FontWeight.w800))),
+            ]),
+          ),
+        );
+      }),
     );
   }
 }

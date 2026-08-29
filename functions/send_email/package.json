@@ -1,0 +1,12 @@
+{
+  "name": "send_email",
+  "version": "1.0.0",
+  "description": "Sends OTP and transactional emails via Gmail SMTP for Hari Om Traders",
+  "main": "src/index.js",
+  "dependencies": {
+    "nodemailer": "^6.9.7"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
