@@ -240,7 +240,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Container(
                   height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
@@ -251,50 +251,59 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _HeaderMenuButton(
                           onTap: () => _showMobileNav(context),
                         ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: isMobile ? 6 : 8),
                       Flexible(
                         child: Text(
                           ['Dashboard Overview', 'Contact Messages', 'Products', 'Subscriber Directory', 'Users'][_section.clamp(0, 4)],
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)),
+                          style: TextStyle(fontSize: isMobile ? 15 : 18, fontWeight: FontWeight.w800, color: const Color(0xFF0B0E0F)),
                         ),
                       ),
                       const Spacer(),
                       Flexible(
-                        fit: FlexFit.tight,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor: const Color(0xFF00C805),
-                                child: Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : 'A',
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                        fit: FlexFit.loose,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: isMobile ? 140 : 180),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: isMobile ? 4 : 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  radius: isMobile ? 10 : 12,
+                                  backgroundColor: const Color(0xFF00C805),
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                                    style: TextStyle(color: Colors.white, fontSize: isMobile ? 10 : 12, fontWeight: FontWeight.w700),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0B0E0F))),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600, color: const Color(0xFF0B0E0F))),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.logout_rounded, size: 20),
-                        tooltip: 'Log out',
-                        onPressed: () async {
-                          await AppwriteAuthService.signOut();
-                          if (context.mounted) context.go('/');
-                        },
+                      SizedBox(width: isMobile ? 4 : 8),
+                      SizedBox(
+                        width: isMobile ? 36 : 44,
+                        height: isMobile ? 36 : 44,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(Icons.logout_rounded, size: isMobile ? 18 : 20),
+                          tooltip: 'Log out',
+                          onPressed: () async {
+                            await AppwriteAuthService.signOut();
+                            if (context.mounted) context.go('/');
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -362,22 +371,64 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _showMobileNav(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(leading: const Icon(Icons.dashboard_rounded), title: const Text('Overview', overflow: TextOverflow.ellipsis), selected: _section == 0, onTap: () { Navigator.pop(ctx); _selectSection(0); }),
-            ListTile(leading: const Icon(Icons.mail_rounded), title: const Text('Contact Messages', overflow: TextOverflow.ellipsis), selected: _section == 1, onTap: () { Navigator.pop(ctx); _selectSection(1); }),
-            ListTile(leading: const Icon(Icons.inventory_2_rounded), title: const Text('Products', overflow: TextOverflow.ellipsis), selected: _section == 2, onTap: () { Navigator.pop(ctx); _selectSection(2); }),
-            ListTile(leading: const Icon(Icons.how_to_reg_rounded), title: const Text('Subscribers', overflow: TextOverflow.ellipsis), selected: _section == 3, onTap: () { Navigator.pop(ctx); _selectSection(3); }),
-            ListTile(leading: const Icon(Icons.group_rounded), title: const Text('Users', overflow: TextOverflow.ellipsis), selected: _section == 4, onTap: () { Navigator.pop(ctx); _selectSection(4); }),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.home_rounded),
-              title: const Text('Back to Site'),
-              onTap: () { Navigator.pop(ctx); context.go('/'); },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(100))),
+              const SizedBox(height: 8),
+              _MobileNavTile(icon: Icons.dashboard_rounded, label: 'Overview', selected: _section == 0, onTap: () { Navigator.pop(ctx); _selectSection(0); }),
+              _MobileNavTile(icon: Icons.mail_rounded, label: 'Contact Messages', selected: _section == 1, onTap: () { Navigator.pop(ctx); _selectSection(1); }),
+              _MobileNavTile(icon: Icons.inventory_2_rounded, label: 'Products', selected: _section == 2, onTap: () { Navigator.pop(ctx); _selectSection(2); }),
+              _MobileNavTile(icon: Icons.how_to_reg_rounded, label: 'Subscribers', selected: _section == 3, onTap: () { Navigator.pop(ctx); _selectSection(3); }),
+              _MobileNavTile(icon: Icons.group_rounded, label: 'Users', selected: _section == 4, onTap: () { Navigator.pop(ctx); _selectSection(4); }),
+              const Divider(height: 1),
+              _MobileNavTile(icon: Icons.home_rounded, label: 'Back to Site', selected: false, onTap: () { Navigator.pop(ctx); context.go('/'); }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileNavTile extends StatelessWidget {
+  const _MobileNavTile({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: selected ? const Color(0xFFECFDF5) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            height: 44,
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                Icon(icon, size: 20, color: selected ? const Color(0xFF00C805) : const Color(0xFF6B7280)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? const Color(0xFF0B0E0F) : const Color(0xFF374151))),
+                ),
+                const SizedBox(width: 12),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -394,31 +445,41 @@ class _HeaderMenuButton extends StatefulWidget {
 
 class _HeaderMenuButtonState extends State<_HeaderMenuButton> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
       cursor: SystemMouseCursors.click,
       child: Tooltip(
         message: 'Menu',
         child: GestureDetector(
           onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeInOut,
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovered ? const Color(0xFFF3F4F6) : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.menu_rounded,
-              size: 26,
-              color: _hovered ? const Color(0xFF0B0E0F) : Colors.black54,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.92 : _hovered ? 1.0 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _pressed ? const Color(0xFFE5E7EB) : _hovered ? const Color(0xFFF3F4F6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _hovered ? const Color(0xFFE5E7EB) : Colors.transparent, width: 1),
+              ),
+              child: Icon(
+                Icons.menu_rounded,
+                size: 20,
+                color: _hovered ? const Color(0xFF0B0E0F) : const Color(0xFF6B7280),
+              ),
             ),
           ),
         ),
