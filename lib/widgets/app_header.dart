@@ -194,7 +194,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                               if (!isNarrow) ...[
                                                 Flexible(
                                                   child: InkWell(
-                                                    onTap: () => context.go('/app'),
+                                                    onTap: () => context.go(AppwriteAuthService.isAdmin ? '/admin' : '/app'),
                                                     borderRadius: BorderRadius.circular(100),
                                                     child: Container(
                                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -253,7 +253,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                           onSelected: (v) {
                                             if (v == 10) { try{ context.go('/login'); } catch(_){} return; }
                                             if (v == 11) { try{ context.go('/signup'); } catch(_){} return; }
-                                            if (v == 98) { try{ context.go('/app'); } catch(_){} return; }
+                                            if (v == 98) { try{ context.go(AppwriteAuthService.isAdmin ? '/admin' : '/app'); } catch(_){} return; }
                                             if (v == 99) { AppwriteAuthService.signOut(); try{ context.go('/'); } catch(_){} return; }
                                             if (onNavSelected != null) {
                                               onNavSelected!(v);
