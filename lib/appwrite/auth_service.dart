@@ -236,10 +236,176 @@ class AppwriteAuthService {
       await _ensureUserDoc(me);
       debugPrint('[Auth] signUp ok: $e');
       return (ok: true, message: 'Account created!');
-    } on AppwriteException catch (e) {
+} on AppwriteException catch (e) {
       return (ok: false, message: _friendly(e));
     } catch (e) {
       return (ok: false, message: _friendly(e));
+    }
+  }
+
+  // ── Sign Up with Email OTP Verification ──
+  // Two-phase signup: (1) [sendSignupOtp] emails an OTP to prove email
+  // ownership — NO account is created yet; (2) [verifySignupOtp] creates the
+  // Appwrite account, its user document and a session only after verification.
+  static final Map<String, ({String name, String password, DateTime expiresAt})> _pendingSignups = {};
+
+  /// True when a matching user already exists (checked via the Management API).
+  /// Fails open (returns false) so signup is never blocked by a lookup error —
+  /// Appwrite's account.create still enforces uniqueness as a final guard.
+  static Future<bool> _emailAlreadyRegistered(String email) async {
+    final e = email.trim().toLowerCase();
+    final key = AppwriteConfig.appwriteApiKey.trim();
+    if (key.isEmpty) {
+      debugPrint('[Auth] API key not configured — skipping duplicate-email check');
+      return false;
+    }
+    try {
+      final listUri = Uri.parse(
+        '${AppwriteConfig.endpoint}/users?queries[]=${Uri.encodeComponent('{"method":"equal","attribute":"email","values":["$e"]}')}',
+      );
+      final res = await http.get(listUri, headers: {
+        'X-Appwrite-Project': AppwriteConfig.projectId,
+        'X-Appwrite-Key': key,
+      }).timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) {
+        debugPrint('[Auth] duplicate-email check failed ${res.statusCode}: ${res.body}');
+        return false;
+      }
+      final total = (jsonDecode(res.body) as Map<String, dynamic>)['total'] as int? ?? 0;
+      return total > 0;
+    } catch (e) {
+      debugPrint('[Auth] duplicate-email check error: $e');
+      return false;
+    }
+  }
+
+  /// Step 1 (signup): send an OTP to verify email ownership.
+  /// [debugOtp] is set in debug mode when email cannot actually be sent.
+  static Future<({bool ok, String message, String? debugOtp, String? otpId})> sendSignupOtp({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    final n = name.trim();
+    final e = email.trim().toLowerCase();
+    final p = password;
+    if (!AppwriteService.isInitialized) return (ok: false, message: 'Appwrite not configured', debugOtp: null, otpId: null);
+    final nameErr = AuthValidators.validateName(n);
+    if (nameErr != null) return (ok: false, message: nameErr, debugOtp: null, otpId: null);
+    final emailErr = AuthValidators.validateEmail(e);
+    if (emailErr != null) return (ok: false, message: emailErr, debugOtp: null, otpId: null);
+    final passErr = AuthValidators.validatePassword(p);
+    if (passErr != null) return (ok: false, message: passErr, debugOtp: null, otpId: null);
+    if (!canResendOtp(e)) {
+      final r = resendCooldownRemaining(e);
+      return (ok: false, message: 'Please wait ${r}s before resending', debugOtp: null, otpId: null);
+    }
+    // Never send an OTP for an email that already has an account.
+    if (await _emailAlreadyRegistered(e)) {
+      return (ok: false, message: 'An account already exists for $e. Try logging in.', debugOtp: null, otpId: null);
+    }
+
+    final otp = _generateOtp();
+    final otpId = _generateOtpId();
+    _otpStore[e] = (otp: otp, otpId: otpId, expiresAt: DateTime.now().toUtc().add(otpExpiry));
+    _pendingSignups[e] = (name: n, password: p, expiresAt: DateTime.now().toUtc().add(otpExpiry));
+    _verifiedEmails.remove(e);
+    _lastOtpSentAt[e] = DateTime.now();
+    _emailAuthSent.remove(e);
+
+    final sent = await EmailService.instance.sendOtpEmail(email: e, otp: otp, otpId: otpId);
+    if (!sent) {
+      _otpStore.remove(e);
+      _pendingSignups.remove(e);
+      if (kDebugMode) {
+        debugPrint('[Auth] ⚠️ Signup email send failed — returning OTP for debug display');
+        return (ok: true, message: 'Email send failed (debug: OTP available below)', debugOtp: otp, otpId: otpId);
+      }
+      return (ok: false, message: 'Failed to send OTP. Please try again.', debugOtp: null, otpId: null);
+    }
+    debugPrint('[Auth] Signup OTP sent to $e (ID: $otpId)');
+    return (ok: true, message: 'Verification code sent to $e', debugOtp: null, otpId: otpId);
+  }
+
+  /// Resend a signup OTP for an email that already has one pending.
+  static Future<({bool ok, String message, String? debugOtp, String? otpId})> resendSignupOtp(String email) async {
+    final e = email.trim().toLowerCase();
+    final pending = _pendingSignups[e];
+    if (pending == null) {
+      return (ok: false, message: 'No pending signup. Please re-enter your details.', debugOtp: null, otpId: null);
+    }
+    return sendSignupOtp(name: pending.name, email: e, password: pending.password);
+  }
+
+  /// Discard a pending signup (used when the user backs out of the OTP step).
+  static void cancelSignupOtp(String email) {
+    final e = email.trim().toLowerCase();
+    _otpStore.remove(e);
+    _pendingSignups.remove(e);
+    _verifiedEmails.remove(e);
+  }
+
+  /// Step 2 (signup): verify the OTP, then — only on success — create the
+  /// Appwrite account, its user document, a session, and log the user in.
+  static Future<({bool ok, String message})> verifySignupOtp(String email, String otp) async {
+    final e = email.trim().toLowerCase();
+    final otpErr = AuthValidators.validateOtp(otp);
+    if (otpErr != null) return (ok: false, message: otpErr);
+
+    final entry = _otpStore[e];
+    if (entry == null) return (ok: false, message: 'No OTP found. Please request a new one.');
+    if (DateTime.now().toUtc().isAfter(entry.expiresAt)) {
+      _otpStore.remove(e);
+      _pendingSignups.remove(e);
+      return (ok: false, message: 'This OTP has expired. Please request a new one.');
+    }
+    if (entry.otp != otp.trim()) return (ok: false, message: 'The OTP is incorrect. Please try again.');
+    final pending = _pendingSignups[e];
+    if (pending == null) return (ok: false, message: 'No pending signup found. Please start over.');
+
+    // OTP verified — email ownership proven.
+    _otpStore.remove(e);
+    _verifiedEmails.add(e);
+    _pendingSignups.remove(e);
+    Future.delayed(const Duration(minutes: 10), () => _verifiedEmails.remove(e));
+
+    // Final guard against duplicate accounts created while the OTP was valid.
+    if (await _emailAlreadyRegistered(e)) {
+      return (ok: false, message: 'An account already exists for $e. Try logging in.');
+    }
+
+    try {
+      final user = await AppwriteService.account.create(userId: ID.unique(), email: e, password: pending.password, name: pending.name);
+      await AppwriteService.databases.createDocument(
+        databaseId: AppwriteConfig.databaseId,
+        collectionId: AppwriteConfig.usersCollectionId,
+        documentId: user.$id,
+        data: {
+          'userId': user.$id,
+          'name': pending.name,
+          'email': e,
+          'phone': '',
+          'role': 'customer',
+          'privileges': '["view_products","place_orders","view_orders","manage_cart","manage_wishlist","view_invoices","manage_profile","contact_support"]',
+          'status': 'active',
+          'emailVerification': true,
+          'phoneVerification': false,
+        },
+      ).catchError((err) {
+        debugPrint('[Auth] DB doc create failed (non-fatal): $err');
+        return null as dynamic;
+      });
+      await AppwriteService.account.createEmailPasswordSession(email: e, password: pending.password);
+      final me = await AppwriteService.account.get();
+      appwriteUserNotifier.value = me;
+      _demoUser = null;
+      await _ensureUserDoc(me);
+      debugPrint('[Auth] signup (verified OTP) ok: $e');
+      return (ok: true, message: 'Account created — welcome!');
+    } on AppwriteException catch (e2) {
+      return (ok: false, message: _friendly(e2));
+    } catch (e2) {
+      return (ok: false, message: _friendly(e2));
     }
   }
 

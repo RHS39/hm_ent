@@ -10,6 +10,8 @@ enum AuthMode { login, signup }
 
 enum _ResetStep { none, email, otp, password }
 
+enum _SignupStep { none, otp }
+
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key, this.initialMode = AuthMode.login});
   final AuthMode initialMode;
@@ -36,6 +38,11 @@ class _AuthPageState extends State<AuthPage> {
   String? _resetOtpId;
   Timer? _resendTimer;
   int _resendSeconds = 0;
+
+  // Signup OTP verification flow (verify email ownership before creating account)
+  _SignupStep _signupStep = _SignupStep.none;
+  String _signupEmail = '';
+  String? _signupOtpId;
 
   bool get _canResend => _resendSeconds == 0 && !_busy;
 
@@ -76,6 +83,34 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _submit() async {
+    if (_mode == AuthMode.signup) {
+      await _submitSignup();
+      return;
+    }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text;
+    final res = await AppwriteAuthService.signIn(email: email, password: pass);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.ok) {
+      setState(() => _info = res.message);
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) context.go(AppwriteAuthService.isAdmin ? '/admin' : '/');
+      });
+    } else {
+      setState(() => _error = res.message);
+    }
+  }
+
+  // Signup is two-phase: send OTP to verify email ownership, then create the
+  // account only after the OTP is verified (see _verifySignupOtpAndCreate).
+  Future<void> _submitSignup() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _busy = true;
@@ -85,22 +120,101 @@ class _AuthPageState extends State<AuthPage> {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
     final name = _nameCtrl.text.trim();
-    final res = _mode == AuthMode.signup
-        ? await AppwriteAuthService.signUp(name: name, email: email, password: pass)
-        : await AppwriteAuthService.signIn(email: email, password: pass);
+    final res = await AppwriteAuthService.sendSignupOtp(name: name, email: email, password: pass);
     if (!mounted) return;
     setState(() => _busy = false);
     if (res.ok) {
-      setState(() => _info = res.message);
-      if (_mode == AuthMode.login) {
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) context.go(AppwriteAuthService.isAdmin ? '/admin' : '/');
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message)));
-      }
+      setState(() {
+        _info = res.message;
+        _signupStep = _SignupStep.otp;
+        _signupEmail = email;
+        _signupOtpId = res.otpId;
+      });
+      _startResendCooldown();
+      _showDebugOtp(res.otpId, res.debugOtp);
     } else {
       setState(() => _error = res.message);
+    }
+  }
+
+  void _showDebugOtp(String? otpId, String? debugOtp) {
+    if (kDebugMode && debugOtp != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.bug_report, color: Colors.amber, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'DEBUG OTP ID: ${otpId ?? "N/A"} | OTP: $debugOtp  (email not configured — check console)',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1A1F24),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  void _cancelSignup() {
+    AppwriteAuthService.cancelSignupOtp(_signupEmail);
+    setState(() {
+      _signupStep = _SignupStep.none;
+      _signupOtpId = null;
+      _otpCtrl.clear();
+      _error = null;
+      _info = null;
+    });
+  }
+
+  Future<void> _verifySignupOtpAndCreate() async {
+    final otp = _otpCtrl.text.trim();
+    final v = AuthValidators.validateOtp(otp);
+    if (v != null) {
+      setState(() => _error = v);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    final res = await AppwriteAuthService.verifySignupOtp(_signupEmail, otp);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!res.ok) {
+      setState(() => _error = res.message);
+      return;
+    }
+    _otpCtrl.clear();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message)));
+    if (mounted) context.go(AppwriteAuthService.isAdmin ? '/admin' : '/');
+  }
+
+  Future<void> _resendSignupOtp() async {
+    if (!_canResend) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    final res = await AppwriteAuthService.resendSignupOtp(_signupEmail);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _info = res.ok ? res.message : null;
+      _error = res.ok ? null : res.message;
+      _signupOtpId = res.ok ? (res.otpId ?? _signupOtpId) : _signupOtpId;
+    });
+    if (res.ok) {
+      _startResendCooldown();
+      _showDebugOtp(res.otpId, res.debugOtp);
     }
   }
 
@@ -156,29 +270,7 @@ class _AuthPageState extends State<AuthPage> {
     });
     if (res.ok) {
       _startResendCooldown();
-      // Show debug OTP when email could not actually be sent (web / no provider)
-      if (kDebugMode && res.debugOtp != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.bug_report, color: Colors.amber, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'DEBUG OTP ID: ${res.otpId ?? "N/A"} | OTP: ${res.debugOtp}  (email not configured — check console)',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF1A1F24),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
+      _showDebugOtp(res.otpId, res.debugOtp);
     }
   }
 
@@ -335,8 +427,8 @@ class _AuthPageState extends State<AuthPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── Mode Tabs (hidden during reset flow) ──
-                        if (_resetStep == _ResetStep.none) ...[
+                        // ── Mode Tabs (hidden during reset / signup-OTP flow) ──
+                        if (_resetStep == _ResetStep.none && _signupStep == _SignupStep.none) ...[
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -353,10 +445,7 @@ class _AuthPageState extends State<AuthPage> {
                         ],
 
                         // ── Header ──
-                        if (_resetStep == _ResetStep.none)
-                          Text(_mode == AuthMode.login ? 'Welcome back' : 'Create account',
-                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: isDark ? Colors.white : const Color(0xFF0B0E0F)))
-                        else ...[
+                        if (_resetStep != _ResetStep.none) ...[
                           Row(children: [
                             IconButton(
                               icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
@@ -367,9 +456,25 @@ class _AuthPageState extends State<AuthPage> {
                             const SizedBox(width: 8),
                             Text('Reset password', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: isDark ? Colors.white : const Color(0xFF0B0E0F))),
                           ]),
-                        ],
+                        ] else if (_signupStep == _SignupStep.otp) ...[
+                          Row(children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+                              onPressed: _busy ? null : _cancelSignup,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Verify your email', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: isDark ? Colors.white : const Color(0xFF0B0E0F))),
+                          ]),
+                        ] else
+                          Text(_mode == AuthMode.login ? 'Welcome back' : 'Create account',
+                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: isDark ? Colors.white : const Color(0xFF0B0E0F))),
                         const SizedBox(height: 4),
-                        if (_resetStep == _ResetStep.none)
+                        if (_resetStep == _ResetStep.none && _signupStep == _SignupStep.otp)
+                          Text('Enter the 6-digit code sent to $_signupEmail. Your account is created only after verification.',
+                              style: theme.textTheme.bodySmall?.copyWith(color: isDark ? Colors.white60 : const Color(0xFF6B7280)))
+                        else if (_resetStep == _ResetStep.none)
                           Text(_mode == AuthMode.login ? 'Log in to track orders and save favorites' : 'Join 10k+ families enjoying organic jaggery',
                               style: theme.textTheme.bodySmall?.copyWith(color: isDark ? Colors.white60 : const Color(0xFF6B7280)))
                         else if (_resetStep == _ResetStep.email)
@@ -407,8 +512,8 @@ class _AuthPageState extends State<AuthPage> {
                             ]),
                           ),
 
-                        // ── Step: Login/Signup Form ──
-                        if (_resetStep == _ResetStep.none) ...[
+                        // ── Step: Login/Signup Form (hidden during reset / signup-OTP flow) ──
+                        if (_resetStep == _ResetStep.none && _signupStep == _SignupStep.none) ...[
                           Form(
                             key: _formKey,
                             child: Column(children: [
@@ -699,6 +804,74 @@ class _AuthPageState extends State<AuthPage> {
                               child: _busy
                                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                   : const Text('Reset Password', style: TextStyle(fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                        ],
+
+                        // ── Step: Signup OTP (verify email ownership) ──
+                        if (_signupStep == _SignupStep.otp) ...[
+                          if (_signupOtpId != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1A1F24) : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: isDark ? const Color(0xFF23282D) : const Color(0xFFE5E7EB)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('OTP ID', style: TextStyle(color: const Color(0xFF6B7280), fontSize: 13, fontWeight: FontWeight.w600)),
+                                  Text(_signupOtpId!, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 6, color: isDark ? Colors.white : const Color(0xFF0B0E0F), fontFamily: 'monospace')),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _otpCtrl,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.w700),
+                            decoration: _dec('000000', Icons.pin_outlined).copyWith(
+                              counterText: '',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: _busy ? null : _verifySignupOtpAndCreate,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF00C805),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: _busy
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('Verify & Create Account', style: TextStyle(fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
+                            child: Column(
+                              children: [
+                                TextButton(
+                                  onPressed: _canResend ? _resendSignupOtp : null,
+                                  child: Text(
+                                    _resendSeconds > 0 ? 'Resend OTP in ${_resendSeconds}s' : 'Resend OTP',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                if (_resendSeconds > 0)
+                                  Text(
+                                    'Please wait before requesting a new code',
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: const Color(0xFF9CA3AF), fontSize: 11),
+                                  ),
+                              ],
                             ),
                           ),
                         ],
