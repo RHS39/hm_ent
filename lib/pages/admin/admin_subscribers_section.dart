@@ -195,7 +195,7 @@ class _SubscribersSectionState extends State<SubscribersSection> {
             children: [
               const Icon(Icons.how_to_reg_rounded, size: 16, color: Color(0xFF00C805)),
               const SizedBox(width: 6),
-              const Text('Subscribers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0B0E0F))),
+              const Flexible(child: Text('Subscribers', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0B0E0F)))),
               const Spacer(),
               refreshBtn,
             ],

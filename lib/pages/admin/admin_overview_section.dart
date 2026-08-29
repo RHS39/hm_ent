@@ -389,7 +389,7 @@ class _SubscriberGrowthCardState extends State<_SubscriberGrowthCard> {
         children: [
           Row(
             children: [
-              const Text('Subscriber Growth', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+              const Flexible(child: Text('Subscriber Growth', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
               const Spacer(),
               PopupMenuButton<String>(
                 onSelected: (v) => setState(() => _range = v),
@@ -611,7 +611,7 @@ class _MessageSourceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('Message Source Breakdown', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+              const Flexible(child: Text('Message Source Breakdown', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
               const Spacer(),
               InkWell(
                 onTap: () => context.go('/admin/contacts'),
@@ -768,7 +768,7 @@ class _RecentSubscribersCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('Recent Subscribers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+              const Flexible(child: Text('Recent Subscribers', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
               const Spacer(),
               InkWell(onTap: () => context.go('/admin/subscribers'), child: const Text('View all', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF00A63E)))),
             ],
@@ -839,7 +839,7 @@ class _RecentMessagesCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('Recent Messages', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F))),
+              const Flexible(child: Text('Recent Messages', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0B0E0F)))),
               const Spacer(),
               InkWell(onTap: () => context.go('/admin/contacts'), child: const Text('View all', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF00A63E)))),
             ],

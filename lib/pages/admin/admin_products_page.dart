@@ -452,7 +452,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text('${_filtered.length} of ${_allProducts.length} products', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280))),
+          Flexible(child: Text('${_filtered.length} of ${_allProducts.length} products', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)))),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -659,7 +659,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE5E7EB))),
       child: Row(children: [
-        Text('Page ${_currentPage + 1} of $_totalPages • ${_filtered.length} items', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6B7280))),
+        Flexible(child: Text('Page ${_currentPage + 1} of $_totalPages • ${_filtered.length} items', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6B7280)))),
         const Spacer(),
         const Text('Rows per page:', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
         const SizedBox(width: 8),

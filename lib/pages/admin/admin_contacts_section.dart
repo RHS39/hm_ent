@@ -533,7 +533,7 @@ class _ContactsSectionState extends State<ContactsSection> {
               child: Row(children: [
                 const Icon(Icons.mail_outline_rounded, size: 14, color: Color(0xFF9CA3AF)),
                 const SizedBox(width: 6),
-                Text('${filtered.length} conversations • Tap to read full message', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w500)),
+                Text('${filtered.length} conversations • Tap to read full message', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w500)),
                 const Spacer(),
                 TextButton.icon(onPressed: widget.onRefresh, icon: const Icon(Icons.refresh_rounded, size: 14), label: const Text('Refresh', style: TextStyle(fontSize: 12)), style: TextButton.styleFrom(foregroundColor: const Color(0xFF6B7280), visualDensity: VisualDensity.compact)),
               ]),
