@@ -205,6 +205,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                                 ),
                                                 const SizedBox(width: 8),
                                               ],
+                                              TextButton(
+                                                onPressed: () => context.go('/app'),
+                                                style: TextButton.styleFrom(foregroundColor: const Color(0xFF00C805), textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                                child: const Text('My Account'),
+                                              ),
+                                              const SizedBox(width: 4),
                                               OutlinedButton(
                                                 onPressed: () async { await AppwriteAuthService.signOut(); if(context.mounted) context.go('/'); },
                                                 style: OutlinedButton.styleFrom(foregroundColor: fg, side: BorderSide(color: isDark?const Color(0xFF2A2E32):const Color(0xFFE5E7EB)), shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)),
@@ -249,6 +255,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                           onSelected: (v) {
                                             if (v == 10) { try{ context.go('/login'); } catch(_){} return; }
                                             if (v == 11) { try{ context.go('/signup'); } catch(_){} return; }
+                                            if (v == 98) { try{ context.go('/app'); } catch(_){} return; }
                                             if (v == 99) { AppwriteAuthService.signOut(); try{ context.go('/'); } catch(_){} return; }
                                             if (onNavSelected != null) {
                                               onNavSelected!(v);
@@ -265,6 +272,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                             ];
                                             if (user != null) {
                                               items.add(const PopupMenuDivider());
+                                              items.add(PopupMenuItem(value: 98, child: Row(children: [Icon(Icons.dashboard_outlined, size:16), SizedBox(width:8), Text('My Account')])));
                                               items.add(PopupMenuItem(value: 99, child: Row(children: [Icon(Icons.logout, size:16), SizedBox(width:8), Text('Log out')])));
                                             } else {
                                               items.addAll(const [
