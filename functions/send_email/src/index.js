@@ -1,12 +1,22 @@
 // Appwrite Cloud Function — sends OTP/transactional emails via Gmail SMTP.
 //
-// Deploy: Appwrite Console > Functions > Create Function > Node.js 18
-// Env vars to set in Appwrite Console:
+// Deploy: Appwrite Console > Functions > Create Function
+//   - Function ID:  send_email   (or any ID; the app just needs the HTTP URL)
+//   - Runtime:      Node.js 18 or 20
+//   - HTTP trigger: Enabled
+//   - Execute:      "any"  (public — required for unauthenticated browser calls)
+// Env vars to set in Appwrite Console (recommended — code has same defaults):
 //   GMAIL_SMTP_EMAIL = rohitft20@gmail.com
 //   GMAIL_APP_PASSWORD = nrcppvuxywvttyvj
 //
 // HTTP Trigger — POST with body:
 //   { "email": "...", "subject": "...", "html": "...", "text": "..." }
+// The app sends { email, to, subject, html, text } — "to" is also accepted.
+//
+// After deploy, copy the HTTP trigger URL (Console > Functions > send_email >
+// Settings > Configuration > HTTP) into AppwriteConfig.mailApiUrl (or pass
+// --dart-define=MAIL_API_URL=<url>). MailApiService detects `.appwrite.run` URLs
+// and posts here automatically.
 
 const nodemailer = require('nodemailer');
 
@@ -24,8 +34,9 @@ module.exports = async ({ req, res, log, error }) => {
     return res.json({ success: false, error: 'Invalid JSON body' }, 400);
   }
 
-  const { email, subject, html, text } = body || {};
-  if (!email || !email.includes('@')) {
+  const { email, to, subject, html, text } = body || {};
+  const recipient = email || to || '';
+  if (!recipient || !recipient.includes('@')) {
     return res.json({ success: false, error: 'Invalid email address' }, 400);
   }
 
@@ -41,13 +52,13 @@ module.exports = async ({ req, res, log, error }) => {
   try {
     const info = await transporter.sendMail({
       from: `"Hari Om Traders" <${smtpEmail}>`,
-      to: email,
+      to: recipient,
       subject: subject || 'Hari Om Traders',
       html: html || '',
       text: text || '',
     });
 
-    log(`Email sent to ${email}: ${info.messageId}`);
+    log(`Email sent to ${recipient}: ${info.messageId}`);
     return res.json({ success: true, messageId: info.messageId });
   } catch (err) {
     error(`SMTP error: ${err.message}`);

@@ -31,6 +31,7 @@ class MailApiService {
     if (url.contains('resend')) return 'resend';
     if (url.contains('sendgrid')) return 'sendgrid';
     if (url.contains('brevo') || url.contains('sendinblue')) return 'brevo';
+    if (url.contains('appwrite.run') || url.contains('appwrite.app')) return 'appwrite_http';
     if (url.contains('/functions/')) return 'appwrite_function';
     return 'generic';
   }
@@ -116,6 +117,24 @@ class MailApiService {
               'htmlContent': htmlBody,
             }),
           ).timeout(const Duration(seconds: 15));
+          break;
+
+        case 'appwrite_http':
+          // Appwrite Cloud Function HTTP trigger (functions/send_email) — public
+          // POST, no auth headers needed (Execute permission = "any").
+          res = await http.post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'email': to,
+              'to': to,
+              'subject': subject,
+              'html': htmlBody,
+              'text': textBody,
+            }),
+          ).timeout(const Duration(seconds: 20));
           break;
 
         case 'appwrite_function':

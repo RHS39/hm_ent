@@ -125,7 +125,7 @@ class AppwriteConfig {
       gmailAppPasswordSanitized.isNotEmpty && effectiveGmailSmtpEmail.contains('@');
 
   // ── Transactional Mail API (preferred for OTP — server-side, no popup) ──
-  /// Provider hint: resend | sendgrid | brevo | generic | appwrite_function | auto
+  /// Provider hint: resend | sendgrid | brevo | generic | appwrite_function | appwrite_http | auto
   static const String mailProvider = String.fromEnvironment('MAIL_PROVIDER', defaultValue: 'auto');
 
   /// API key / token for the mail provider (Resend, SendGrid, Brevo, or custom).
@@ -139,7 +139,12 @@ class AppwriteConfig {
   ///  SendGrid: https://api.sendgrid.com/v3/mail/send
   ///  Brevo: https://api.brevo.com/v3/smtp/email
   ///  Generic: https://your-backend.com/api/send-email
-  ///  Appwrite Function: https://cloud.appwrite.io/v1/functions/<funcId>/executions
+  ///  Appwrite Function (execution): https://cloud.appwrite.io/v1/functions/<funcId>/executions
+  ///  Appwrite Function (HTTP trigger — RECOMMENDED for web):
+  ///    https://<trigger-hash>.<region>.appwrite.run
+  ///    Copy this exact URL from Appwrite Console → Functions → send_email →
+  ///    Settings → Configuration → HTTP (Trigger). Requires the function to be
+  ///    deployed with Execute permission set to "any" (see functions/send_email).
   ///  Local relay: http://localhost:8080/send-email (run: dart run tools/smtp_server.dart)
   static const String mailApiUrl = String.fromEnvironment('MAIL_API_URL', defaultValue: 'http://localhost:8080/send-email');
 
@@ -151,6 +156,8 @@ class AppwriteConfig {
 
   static bool get isMailApiConfigured {
     if (mailApiUrl.isEmpty) return false;
+    // Appwrite Function HTTP trigger — public endpoint, no API key needed
+    if (mailApiUrl.contains('appwrite.run') || mailApiUrl.contains('appwrite.app')) return true;
     // Local relay or Appwrite Functions — no API key needed
     if (mailApiUrl.contains('localhost') || mailApiUrl.contains('/functions/')) return true;
     // For other providers: need API key + from email
