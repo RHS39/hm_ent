@@ -235,37 +235,94 @@ class EmailService {
   }
 
   String _renderOtpTemplate(String email, String otp, {String? otpId}) {
+    // Premium, email-client-safe OTP template (table-based, no flex for Gmail/Outlook).
+    // Fixes: OTP ID row was flex-based and rendered cramped/overlapped on mobile.
     return '''
 <!DOCTYPE html>
-<html>
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#F9FAFB; margin:0; padding:24px;">
-    <div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #E5E7EB;">
-      <div style="background:#0B0E0F; padding:20px 24px; color:#ffffff;">
-        <div style="display:flex; align-items:center;">
-          <span style="font-weight:800; font-size:18px; letter-spacing:-0.5px;">Hari Om Traders</span>
-          <span style="margin-left:auto; background:#00C805; color:#fff; font-size:10px; font-weight:800; padding:4px 8px; border-radius:100px; letter-spacing:0.6px;">ORGANIC</span>
-        </div>
-      </div>
-      <div style="padding:28px 24px;">
-        <h1 style="margin:0 0 8px 0; font-size:20px; font-weight:800; color:#0B0E0F;">Password Reset OTP</h1>
-        <p style="margin:0 0 16px 0; color:#6B7280; font-size:14px; line-height:1.6;">
-          Hi — use the code below to reset your password for
-          <strong style="color:#0B0E0F;">$email</strong>.<br/>
-          This code expires in <strong>10 minutes</strong>.
-        </p>
-        ${otpId != null ? '<div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:14px 16px; margin:8px 0 16px 0; display:flex; justify-content:space-between; align-items:center;"><span style="color:#6B7280; font-size:13px; font-weight:600;">OTP ID</span><span style="font-size:22px; font-weight:900; letter-spacing:6px; color:#0B0E0F; font-family:monospace;">$otpId</span></div>' : ''}
-        <div style="background:#F9FAFB; border:2px dashed #00C805; border-radius:12px; padding:20px; text-align:center; margin:8px 0;">
-          <span style="font-size:36px; font-weight:900; letter-spacing:10px; color:#0B0E0F; font-family:monospace;">$otp</span>
-        </div>
-        <p style="margin:16px 0 0 0; color:#9CA3AF; font-size:12px; line-height:1.5;">
-          If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
-        </p>
-      </div>
-      <div style="padding:12px 24px; background:#F9FAFB; border-top:1px solid #E5E7EB; color:#9CA3AF; font-size:11px; text-align:center;">
-        Hari Om Traders &bull; Varanasi, UP 221313 &bull; <a href="https://hariomtraders.com" style="color:#6B7280;">hariomtraders.com</a><br/>
-        No spam. Unsubscribe anytime. Max 2&times; per month.
-      </div>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset OTP - Hari Om Traders</title>
+  </head>
+  <body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <!-- Preheader (hidden preview text) -->
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#F3F4F6;">
+      Your OTP is $otp — expires in 10 minutes.${otpId != null ? ' Reference ID: $otpId.' : ''} Do not share this code.
     </div>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F3F4F6;">
+      <tr>
+        <td align="center" style="padding:24px 16px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:560px; background:#ffffff; border-radius:16px; border:1px solid #E5E7EB; overflow:hidden;">
+            <!-- Header -->
+            <tr>
+              <td style="background:#0B0E0F; padding:18px 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td align="left" style="font-weight:800; font-size:18px; letter-spacing:-0.4px; color:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Hari Om Traders</td>
+                    <td align="right"><span style="display:inline-block; background:#00C805; color:#ffffff; font-size:10px; font-weight:800; padding:5px 10px; border-radius:100px; letter-spacing:0.7px; line-height:1;">ORGANIC</span></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <!-- Body -->
+            <tr>
+              <td style="padding:28px 28px 24px 28px;">
+                <h1 style="margin:0 0 10px 0; font-size:22px; font-weight:900; color:#0B0E0F; line-height:1.25; letter-spacing:-0.3px;">Password reset code</h1>
+                <p style="margin:0 0 18px 0; color:#4B5563; font-size:14px; line-height:1.65;">
+                  Hi — use the code below to reset the password for<br>
+                  <span style="color:#0B0E0F; font-weight:700; word-break:break-all;">$email</span>
+                </p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 14px 0;">
+                  <tr>
+                    <td style="background:#FEF3C7; border:1px solid #FDE68A; border-radius:8px; padding:10px 14px; text-align:center; color:#92400E; font-size:13px; font-weight:600;">
+                      &#9200; Expires in <strong style="color:#78350F;">10 minutes</strong> &nbsp;&bull;&nbsp; Do not share this code
+                    </td>
+                  </tr>
+                </table>
+                ${otpId != null ? '''
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 14px 0; background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px;">
+                  <tr>
+                    <td style="padding:13px 16px; color:#6B7280; font-size:11px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase; vertical-align:middle;">Reference ID</td>
+                    <td align="right" style="padding:13px 16px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:14px; font-weight:800; letter-spacing:3px; color:#6B7280; vertical-align:middle;">$otpId</td>
+                  </tr>
+                </table>''' : ''}
+                <!-- OTP Code -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td align="center" style="background:#F0FDF4; border:2px dashed #00C805; border-radius:14px; padding:22px 16px;">
+                      <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:34px; font-weight:900; letter-spacing:12px; color:#0B0E0F; line-height:1; padding-left:12px;">$otp</div>
+                      <div style="margin-top:10px; font-size:11px; font-weight:700; color:#059669; letter-spacing:0.8px; text-transform:uppercase;">One-time password &bull; Valid once</div>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:18px 0 0 0; color:#6B7280; font-size:12px; line-height:1.6; text-align:center;">
+                  Enter this code on the password reset screen to create a new password.
+                </p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:18px 0 0 0;">
+                  <tr>
+                    <td style="border-top:1px solid #F3F4F6; padding-top:16px; color:#9CA3AF; font-size:11px; line-height:1.6;">
+                      <strong style="color:#6B7280;">Didn&apos;t request this?</strong> You can safely ignore this email — your password will not be changed. If you&apos;re concerned, please contact support.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <!-- Footer -->
+            <tr>
+              <td style="background:#F9FAFB; border-top:1px solid #E5E7EB; padding:16px 24px; text-align:center;">
+                <div style="color:#6B7280; font-size:12px; font-weight:700; letter-spacing:-0.2px;">Hari Om Traders</div>
+                <div style="color:#9CA3AF; font-size:11px; line-height:1.5; margin-top:2px;">Varanasi, UP 221313 &bull; <a href="https://hariomtraders.com" style="color:#059669; text-decoration:none; font-weight:600;">hariomtraders.com</a></div>
+                <div style="color:#9CA3AF; font-size:11px; margin-top:6px;">Need help? <a href="mailto:support@hariomtraders.com" style="color:#6B7280; text-decoration:underline;">support@hariomtraders.com</a></div>
+              </td>
+            </tr>
+          </table>
+          <div style="max-width:560px; margin:14px auto 0 auto; text-align:center; color:#9CA3AF; font-size:10px; line-height:1.5;">
+            This is an automated message — please don&apos;t reply directly to this email.
+          </div>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>''';
   }
