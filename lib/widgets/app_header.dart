@@ -270,8 +270,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                             ];
                                             if (user != null) {
                                               items.add(const PopupMenuDivider());
-                                              items.add(PopupMenuItem(value: 98, child: Row(children: [Icon(Icons.dashboard_outlined, size:16), SizedBox(width:8), Flexible(child: Text('My Account'))])));
-                                              items.add(PopupMenuItem(value: 99, child: Row(children: [Icon(Icons.logout, size:16), SizedBox(width:8), Flexible(child: Text('Log out'))])));
+                                              items.add(const PopupMenuItem(value: 98, child: Text('My Account')));
+                                              items.add(const PopupMenuItem(value: 99, child: Text('Log out')));
                                             } else {
                                               items.addAll(const [
                                                 PopupMenuDivider(),
